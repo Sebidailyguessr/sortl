@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Caprasimo, Newsreader, JetBrains_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const caprasimo = Caprasimo({
@@ -38,6 +39,10 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
+  // Set NEXT_PUBLIC_GSC_VERIFICATION in Vercel env vars to activate
+  ...(process.env.NEXT_PUBLIC_GSC_VERIFICATION
+    ? { verification: { google: process.env.NEXT_PUBLIC_GSC_VERIFICATION } }
+    : {}),
   openGraph: {
     type: "website",
     url: SITE_URL,
@@ -78,6 +83,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-full flex flex-col bg-[--paper] text-[--ink] antialiased">
         {children}
+        {/* Umami analytics — set NEXT_PUBLIC_UMAMI_WEBSITE_ID in Vercel env vars */}
+        {process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
+          <Script
+            src="https://umami.stoop.games/script.js"
+            data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
+            strategy="afterInteractive"
+          />
+        )}
       </body>
     </html>
   );
