@@ -479,6 +479,7 @@ export default function GameBoard({
         levelNumber={currentLevel}
         onNextLevel={handleNextLevel}
         onRestart={handleRestart}
+        onClose={() => setShowOverlay(false)}
       />
     </div>
   );

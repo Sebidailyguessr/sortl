@@ -15,6 +15,7 @@ interface Props {
   levelNumber?: number;
   onNextLevel?: () => void;
   onRestart?: () => void;
+  onClose?: () => void;
 }
 
 function useCountdown() {
@@ -39,7 +40,7 @@ function useCountdown() {
 
 export default function ResultsOverlay({
   visible, won, stuck, moves, par, mode,
-  puzzleNumber, levelNumber, onNextLevel, onRestart,
+  puzzleNumber, levelNumber, onNextLevel, onRestart, onClose,
 }: Props) {
   const countdown = useCountdown();
   const [copied, setCopied] = useState(false);
@@ -69,23 +70,47 @@ export default function ResultsOverlay({
     : `Level #${String(levelNumber).padStart(3,"0")}`;
 
   return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 200,
-      background: "rgba(42,31,21,0.55)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      padding: 24,
-      animation: "overlayFadeIn 300ms ease-out both",
-    }}>
-      <div style={{
-        background: "var(--paper, #f3e9d6)",
-        border: "1px dashed rgba(42,31,21,0.18)",
-        borderRadius: 12,
-        padding: "32px 28px",
-        maxWidth: 340,
-        width: "100%",
-        textAlign: "center",
-        fontFamily: mono,
-      }}>
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, zIndex: 200,
+        background: "rgba(42,31,21,0.55)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 24,
+        animation: "overlayFadeIn 300ms ease-out both",
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          position: "relative",
+          background: "var(--paper, #f3e9d6)",
+          border: "1px dashed rgba(42,31,21,0.18)",
+          borderRadius: 12,
+          padding: "32px 28px",
+          maxWidth: 340,
+          width: "100%",
+          textAlign: "center",
+          fontFamily: mono,
+        }}
+      >
+        {/* X button */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              position: "absolute", top: 10, right: 12,
+              background: "none", border: "none",
+              color: "var(--ink-faded, #8a7355)",
+              fontSize: 18, lineHeight: 1,
+              cursor: "pointer", padding: 4,
+            }}
+          >
+            ×
+          </button>
+        )}
+
         {/* Title */}
         <div style={{
           fontFamily: "'Caprasimo', serif",
