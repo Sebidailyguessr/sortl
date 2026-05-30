@@ -1,65 +1,118 @@
-import Image from "next/image";
+"use client";
+import { useEffect, useState } from "react";
+import StoopNav from "./components/StoopNav";
+import StoopFooter from "./components/StoopFooter";
+import GameBoard from "./components/GameBoard";
+import Sidebar from "./components/Sidebar";
+
+type Mode = "daily" | "levels";
+
+const MAX_LEVELS = 300;
+
+function findNextUnsolvedLevel(from: number): number {
+  for (let n = from; n <= MAX_LEVELS; n++) {
+    if (localStorage.getItem(`sl-level-done-${n}`) !== "true") return n;
+  }
+  return MAX_LEVELS; // all done — stay at last
+}
 
 export default function Home() {
+  const [mode, setMode]               = useState<Mode>("daily");
+  const [currentLevel, setCurrentLevel] = useState(1);
+
+  // ── Hydrate from localStorage ────────────────────────────────────────────
+  useEffect(() => {
+    try {
+      // Mode
+      const savedMode = localStorage.getItem("sl-mode") as Mode | null;
+      const activeMode: Mode = (savedMode === "daily" || savedMode === "levels")
+        ? savedMode : "daily";
+      setMode(activeMode);
+
+      // Level — ensure key exists
+      let savedLevel = Number(localStorage.getItem("sl-current-level") || 0);
+      if (savedLevel < 1) savedLevel = 1;
+
+      // If opening in levels mode, skip already-completed levels
+      if (activeMode === "levels") {
+        savedLevel = findNextUnsolvedLevel(savedLevel);
+      }
+
+      setCurrentLevel(savedLevel);
+      localStorage.setItem("sl-current-level", String(savedLevel));
+    } catch {}
+  }, []);
+
+  // ── Mode toggle ──────────────────────────────────────────────────────────
+  function handleModeChange(m: Mode) {
+    setMode(m);
+    try {
+      localStorage.setItem("sl-mode", m);
+      if (m === "levels") {
+        // Jump to first unsolved level if current is already done
+        const next = findNextUnsolvedLevel(currentLevel);
+        if (next !== currentLevel) {
+          setCurrentLevel(next);
+          localStorage.setItem("sl-current-level", String(next));
+        }
+      }
+    } catch {}
+  }
+
+  // ── Level completion (called from GameBoard) ─────────────────────────────
+  function handleLevelComplete(level: number, moves: number) {
+    try {
+      const alreadyDone = localStorage.getItem(`sl-level-done-${level}`) === "true";
+      localStorage.setItem(`sl-level-done-${level}`, "true");
+      // Best score — always update if improved
+      const best = localStorage.getItem(`sl-best-${level}`);
+      if (!best || moves < Number(best)) {
+        localStorage.setItem(`sl-best-${level}`, String(moves));
+      }
+      // Total solved — only count once per level
+      if (!alreadyDone) {
+        const solved = Number(localStorage.getItem("sl-total-solved") || 0);
+        localStorage.setItem("sl-total-solved", String(solved + 1));
+      }
+    } catch {}
+  }
+
+  // ── Next level — skip already-completed ──────────────────────────────────
+  function handleNextLevel() {
+    try {
+      const next = findNextUnsolvedLevel(currentLevel + 1);
+      setCurrentLevel(next);
+      localStorage.setItem("sl-current-level", String(next));
+    } catch {}
+  }
+
+  function handleSelectLevel(n: number) {
+    setCurrentLevel(n);
+    try { localStorage.setItem("sl-current-level", String(n)); } catch {}
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <>
+      <StoopNav />
+      <main className="flex-1 flex flex-col md:flex-row max-w-6xl mx-auto w-full px-4 gap-6 pt-6 pb-12">
+        <div className="flex-1 min-w-0">
+          <GameBoard
+            mode={mode}
+            onModeChange={handleModeChange}
+            currentLevel={currentLevel}
+            onLevelComplete={handleLevelComplete}
+            onNextLevel={handleNextLevel}
+          />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="md:w-72 md:shrink-0">
+          <Sidebar
+            mode={mode}
+            currentLevel={currentLevel}
+            onSelectLevel={handleSelectLevel}
+          />
         </div>
       </main>
-    </div>
+      <StoopFooter />
+    </>
   );
 }
