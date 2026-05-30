@@ -1,42 +1,77 @@
 "use client";
+import { useEffect, useState } from "react";
 
-const NAV_GAMES = [
-  { name: "DailyGuessr",    url: "https://dailyguessr.stoop.games" },
-  { name: "FlagGuessr",     url: "https://flagguessr.stoop.games" },
-  { name: "CocktailGuessr", url: "https://cocktailguessr.stoop.games" },
-  { name: "Palette",        url: "https://palette.stoop.games" },
-  { name: "Bloom",          url: "https://bloom.stoop.games" },
-  { name: "Sortl",          url: "/", current: true },
+const GAMES = [
+  { key: "dailyguessr",    label: "DailyGuessr",    url: "https://dailyguessr.app" },
+  { key: "flagguessr",     label: "FlagGuessr",      url: "https://flagguessr.app" },
+  { key: "cocktailguessr", label: "CocktailGuessr",  url: "https://cocktailguessr.app" },
+  { key: "palette",        label: "Palette",          url: "https://palette.stoop.games" },
+  { key: "bloom",          label: "Bloom",            url: "https://bloom.stoop.games" },
+  { key: "sortl",          label: "Sortl",            url: "/" },
 ];
 
+const DAYS   = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
+const MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+
 export default function StoopNav() {
+  const [dateStr, setDateStr] = useState("");
+  useEffect(() => {
+    const d = new Date();
+    setDateStr(`${DAYS[d.getDay()]} ${String(d.getDate()).padStart(2,"0")} ${MONTHS[d.getMonth()]}`);
+  }, []);
+
   return (
-    <nav className="sticky top-0 z-40 border-b border-[--rule] bg-[--paper]/90 backdrop-blur-sm">
-      <div className="max-w-6xl mx-auto px-4 h-12 flex items-center gap-1 overflow-x-auto scrollbar-none">
-        {/* Stoop wordmark */}
-        <a
-          href="https://stoop.games"
-          className="shrink-0 mr-3 text-sm font-semibold text-[--ink-faded] hover:text-[--ink] transition-colors"
-          style={{ fontFamily: "var(--font-caprasimo)" }}
-        >
+    <nav style={{
+      background: "var(--paper, #f3e9d6)",
+      borderBottom: "1px dashed rgba(42,31,21,0.18)",
+      position: "sticky", top: 0, zIndex: 50,
+      fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+    }}>
+      <div style={{
+        maxWidth: 1240, margin: "0 auto",
+        padding: "0 24px",
+        height: 44,
+        display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
+      }}>
+        {/* Wordmark */}
+        <a href="https://stoop.games" style={{
+          display: "flex", alignItems: "center", gap: 8,
+          fontFamily: "'Caprasimo', serif",
+          fontSize: 18, color: "var(--ink, #2a1f15)",
+          textDecoration: "none", flexShrink: 0,
+        }}>
+          <span style={{
+            width: 9, height: 9, borderRadius: "50%",
+            background: "#c45a3a",
+            boxShadow: "0 0 0 2.5px var(--paper,#f3e9d6), 0 0 0 3.5px #c45a3a",
+            display: "inline-block",
+          }} />
           Stoop
         </a>
-        <span className="shrink-0 text-[--rule] mr-3">|</span>
-        {NAV_GAMES.map(g => (
-          <a
-            key={g.name}
-            href={g.url}
-            className={[
-              "shrink-0 px-3 py-1 rounded-lg text-sm transition-colors whitespace-nowrap",
-              g.current
-                ? "bg-[--terracotta] text-white font-semibold"
-                : "text-[--ink-soft] hover:text-[--ink] hover:bg-[--paper-2]",
-            ].join(" ")}
-          >
-            {g.name}
-          </a>
-        ))}
+
+        {/* Game links */}
+        <div style={{
+          display: "flex", gap: 20, alignItems: "center",
+          fontSize: 10, textTransform: "uppercase", letterSpacing: "0.12em",
+        }} className="stoop-gamenav">
+          {GAMES.map(g => (
+            <a key={g.key} href={g.url} style={{
+              color: g.key === "sortl" ? "#c45a3a" : "var(--ink-soft, #5a4632)",
+              textDecoration: "none",
+              borderBottom: g.key === "sortl" ? "1px solid #c45a3a" : "1px solid transparent",
+              paddingBottom: 2,
+            }}>{g.label}</a>
+          ))}
+        </div>
+
+        {/* Date */}
+        <span style={{
+          fontSize: 10, letterSpacing: "0.08em",
+          color: "var(--ink-faded, #8a7355)", flexShrink: 0,
+        }}>{dateStr}</span>
       </div>
+
+      <style>{`.stoop-gamenav { display: flex; } @media(max-width:600px){ .stoop-gamenav { display: none; } }`}</style>
     </nav>
   );
 }

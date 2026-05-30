@@ -359,68 +359,89 @@ export default function GameBoard({
     : gameState.tubes;
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Mode toggle */}
-      <div className="flex gap-1 p-1 bg-[--paper-2] rounded-xl w-fit border border-[--rule]">
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20, padding: "24px 16px" }}>
+
+      {/* Mode toggle — matches Bloom/Palette exactly */}
+      <div style={{
+        display: "flex",
+        borderRadius: 8,
+        overflow: "hidden",
+        border: "1px dashed rgba(42,31,21,0.18)",
+        fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+        fontSize: 11,
+        letterSpacing: "0.1em",
+        textTransform: "uppercase",
+      }}>
         {(["daily", "levels"] as Mode[]).map(m => (
           <button
             key={m}
             onClick={() => !isBlocked && onModeChange(m)}
-            className={[
-              "px-4 py-1.5 rounded-lg text-sm font-semibold capitalize transition-all",
-              mode === m
-                ? "bg-[--paper] text-[--ink] shadow-sm border border-[--rule]"
-                : "text-[--ink-faded] hover:text-[--ink-soft]",
-            ].join(" ")}
+            style={{
+              padding: "8px 20px",
+              background: mode === m ? "var(--terracotta, #c45a3a)" : "transparent",
+              color: mode === m ? "#fff" : "var(--ink-soft, #5a4632)",
+              border: "none",
+              cursor: "pointer",
+              transition: "background 0.15s ease",
+              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+              fontSize: 11,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+            }}
           >
-            {m === "daily" ? "Daily" : "Levels"}
+            {m}
           </button>
         ))}
       </div>
 
-      {/* Puzzle label + controls */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div>
-          <h2 className="text-sm font-semibold text-[--ink-faded] uppercase tracking-widest">
-            {mode === "daily"
-              ? `Puzzle #${String(puzzleNumber).padStart(3, "0")}`
-              : `Level ${currentLevel}`}
-          </h2>
-          <p className="text-xs text-[--ink-faded] mt-0.5">
-            {mode === "daily" ? "One attempt · come back tomorrow" : "Sort the colors into their tubes"}
-          </p>
+      {/* Puzzle label */}
+      <div style={{
+        fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+        fontSize: 11,
+        color: "var(--ink-faded, #8a7355)",
+        letterSpacing: "0.1em",
+        textTransform: "uppercase",
+      }}>
+        {mode === "daily"
+          ? `Sortl #${String(puzzleNumber).padStart(3, "0")}`
+          : `Level #${String(currentLevel).padStart(3, "0")}`}
+      </div>
+
+      {/* Controls row: move counter + undo/restart */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        width: "100%", maxWidth: 480,
+      }}>
+        <div style={{
+          fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+          fontSize: 13, color: "var(--ink-faded, #8a7355)",
+          letterSpacing: "0.08em",
+        }}>
+          <span style={{ fontSize: 22, fontWeight: 700, color: "var(--ink, #2a1f15)" }}>
+            {gameState.moves}
+          </span>
+          {" "}moves · par {par}
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div style={{ display: "flex", gap: 8 }}>
           <button
             onClick={handleUndo}
             disabled={gameState.history.length === 0 || isDailyDone || !!animState}
-            className="px-3 py-1.5 rounded-lg border border-[--rule] text-[--ink-soft] text-sm hover:bg-[--paper-2] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            style={ctrlBtn}
           >
             ↩ Undo
           </button>
           <button
             onClick={handleRestart}
             disabled={isDailyDone}
-            className="px-3 py-1.5 rounded-lg border border-[--rule] text-[--ink-soft] text-sm hover:bg-[--paper-2] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            style={ctrlBtn}
           >
             ↺ Restart
           </button>
         </div>
       </div>
 
-      {/* Move counter */}
-      <div className="flex items-baseline gap-2">
-        <span
-          className="text-2xl font-bold text-[--ink] tabular-nums"
-          style={{ fontFamily: "var(--font-jetbrains)" }}
-        >
-          {gameState.moves}
-        </span>
-        <span className="text-sm text-[--ink-faded]">moves · par {par}</span>
-      </div>
-
       {/* Tubes */}
-      <div className="flex flex-wrap gap-3 items-end py-2">
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end", justifyContent: "center" }}>
         {displayTubes.map((tube, i) => {
           const complete = tube.length === levelConfig.tubeCapacity && tube.every(c => c === tube[0]);
           return (
@@ -462,3 +483,17 @@ export default function GameBoard({
     </div>
   );
 }
+
+const ctrlBtn: React.CSSProperties = {
+  padding: "6px 14px",
+  background: "transparent",
+  color: "var(--ink-soft, #5a4632)",
+  border: "1px dashed rgba(42,31,21,0.18)",
+  borderRadius: 6,
+  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+  fontSize: 10,
+  letterSpacing: "0.1em",
+  textTransform: "uppercase" as const,
+  cursor: "pointer",
+  transition: "opacity 0.15s",
+};

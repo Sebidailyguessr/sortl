@@ -94,8 +94,8 @@ export default function Home() {
   return (
     <>
       <StoopNav />
-      <main className="flex-1 flex flex-col md:flex-row max-w-6xl mx-auto w-full px-4 gap-6 pt-6 pb-12">
-        <div className="flex-1 min-w-0">
+      <main className="flex flex-col lg:flex-row min-h-[calc(100vh-44px)]">
+        <div className="flex-1 min-w-0 flex flex-col items-center">
           <GameBoard
             mode={mode}
             onModeChange={handleModeChange}
@@ -104,7 +104,7 @@ export default function Home() {
             onNextLevel={handleNextLevel}
           />
         </div>
-        <div className="md:w-72 md:shrink-0">
+        <div>
           <Sidebar
             mode={mode}
             currentLevel={currentLevel}

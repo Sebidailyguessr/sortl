@@ -5,181 +5,190 @@ import RotatingAlsoPlay from "./RotatingAlsoPlay";
 
 const TOTAL_LEVELS = 300;
 
-interface SidebarProps {
+const SCORING: [string, string][] = [
+  ["≤ par",      "FLAWLESS SORT"],
+  ["par +1–3",   "CLEAN SORT"],
+  ["par +4–8",   "DECENT SORT"],
+  ["par +9+",    "MESSY SORT"],
+  ["stuck",      "UNSORTED"],
+];
+
+interface Props {
   mode: "daily" | "levels";
   currentLevel: number;
   onSelectLevel: (n: number) => void;
 }
 
-interface Stats {
-  streak: number;
-  bestStreak: number;
-  gamesPlayed: number;
-  dailyWins: number;
-  totalSolved: number;
-}
+export default function Sidebar({ mode, currentLevel, onSelectLevel }: Props) {
+  const [streak, setStreak]           = useState(0);
+  const [bestStreak, setBestStreak]   = useState(0);
+  const [gamesPlayed, setGamesPlayed] = useState(0);
+  const [dailyWins, setDailyWins]     = useState(0);
+  const [totalSolved, setTotalSolved] = useState(0);
+  const [doneLevels, setDoneLevels]   = useState<Set<number>>(new Set());
 
-function loadStats(): Stats {
-  try {
-    return {
-      streak:      Number(localStorage.getItem("sl-streak")       || 0),
-      bestStreak:  Number(localStorage.getItem("sl-best-streak")  || 0),
-      gamesPlayed: Number(localStorage.getItem("sl-games-played") || 0),
-      dailyWins:   Number(localStorage.getItem("sl-daily-wins")   || 0),
-      totalSolved: Number(localStorage.getItem("sl-total-solved") || 0),
-    };
-  } catch {
-    return { streak: 0, bestStreak: 0, gamesPlayed: 0, dailyWins: 0, totalSolved: 0 };
-  }
-}
-
-function getLevelStatus(n: number, currentLevel: number): "completed" | "current" | "locked" {
-  try {
-    if (localStorage.getItem(`sl-level-done-${n}`) === "true") return "completed";
-    if (n === currentLevel) return "current";
-    if (n < currentLevel)   return "completed"; // unlocked via progression
-    return "locked";
-  } catch {
-    return n === 1 ? "current" : "locked";
-  }
-}
-
-export default function Sidebar({ mode, currentLevel, onSelectLevel }: SidebarProps) {
-  const [stats, setStats]               = useState<Stats>({ streak: 0, bestStreak: 0, gamesPlayed: 0, dailyWins: 0, totalSolved: 0 });
-  const [levelStatuses, setLevelStatuses] = useState<("completed" | "current" | "locked")[]>([]);
-  const [howToOpen, setHowToOpen]       = useState(false);
-  const puzzleNumber = getPuzzleNumber(getTodayKey());
   const currentLevelRef = useRef<HTMLButtonElement | null>(null);
+  const puzzleNumber    = getPuzzleNumber(getTodayKey());
 
   useEffect(() => {
-    setStats(loadStats());
-    setLevelStatuses(Array.from({ length: TOTAL_LEVELS }, (_, i) => getLevelStatus(i + 1, currentLevel)));
+    setStreak(parseInt(localStorage.getItem("sl-streak")       || "0"));
+    setBestStreak(parseInt(localStorage.getItem("sl-best-streak")  || "0"));
+    setGamesPlayed(parseInt(localStorage.getItem("sl-games-played") || "0"));
+    setDailyWins(parseInt(localStorage.getItem("sl-daily-wins")   || "0"));
+    setTotalSolved(parseInt(localStorage.getItem("sl-total-solved") || "0"));
+
+    const done = new Set<number>();
+    for (let n = 1; n <= TOTAL_LEVELS; n++) {
+      if (localStorage.getItem(`sl-level-done-${n}`) === "true") done.add(n);
+    }
+    setDoneLevels(done);
   }, [mode, currentLevel]);
 
-  // Scroll current level square into view whenever it changes
+  // Scroll current level into view
   useEffect(() => {
     if (mode !== "levels") return;
-    const timer = setTimeout(() => {
+    const t = setTimeout(() => {
       currentLevelRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }, 80);
-    return () => clearTimeout(timer);
+    return () => clearTimeout(t);
   }, [mode, currentLevel]);
 
-  const winRate = stats.gamesPlayed > 0
-    ? `${Math.round((stats.dailyWins / stats.gamesPlayed) * 100)}%`
+  const winRate = gamesPlayed > 0
+    ? `${Math.round((dailyWins / gamesPlayed) * 100)}%`
     : "—";
 
   return (
-    <aside className="flex flex-col gap-5">
-      {/* Header */}
-      <div className="border-b border-[--rule] pb-4">
-        <div
-          className="text-2xl text-[--terracotta]"
-          style={{ fontFamily: "var(--font-caprasimo)" }}
-        >
+    <aside className="hidden lg:flex w-72 shrink-0 flex-col bg-[#ebdfc4] border-l border-[rgba(42,31,21,0.18)] overflow-y-auto lg:sticky lg:top-[44px] lg:self-start lg:max-h-[calc(100vh-44px)]">
+
+      {/* Branding */}
+      <div className="px-5 py-4 border-b border-[rgba(42,31,21,0.18)] shrink-0">
+        <span className="text-[#2a1f15] select-none"
+          style={{ fontFamily: "'Caprasimo', serif", fontSize: 18 }}>
           Sortl
-        </div>
-        <div className="text-xs text-[--ink-faded] mt-0.5">
+        </span>
+        <p className="text-[#8a7355] text-xs mt-0.5 font-mono">
           {mode === "daily"
             ? `#${String(puzzleNumber).padStart(3, "0")} · Pour, sort, solve.`
-            : "Level by level — sort every tube."}
-        </div>
+            : "300 levels · sort every tube."}
+        </p>
       </div>
 
-      {/* Stats */}
-      <section>
-        <SectionLabel>Your Stats</SectionLabel>
-        <div className="grid grid-cols-2 gap-2">
-          <StatCell label="Streak"      value={`${stats.streak}🔥`} />
-          <StatCell label="Best Streak" value={`${stats.bestStreak}🏆`} />
-          {mode === "daily" ? (
-            <>
-              <StatCell label="Played"   value={stats.gamesPlayed} />
-              <StatCell label="Win Rate" value={winRate} />
-            </>
-          ) : (
-            <>
-              <StatCell label="Levels Solved" value={stats.totalSolved} />
-              <StatCell label="Current Level" value={currentLevel} />
-            </>
-          )}
-        </div>
-      </section>
-
-      {/* How to Play — accordion on mobile */}
-      <section>
-        <button
-          className="flex items-center justify-between w-full text-left"
-          onClick={() => setHowToOpen(o => !o)}
-          aria-expanded={howToOpen}
-        >
-          <SectionLabel asSpan>How to Play</SectionLabel>
-          <span className="md:hidden text-[--ink-faded] text-xs pr-0.5 select-none" aria-hidden>
-            {howToOpen ? "▲" : "▼"}
-          </span>
-        </button>
-        <div className={`mt-2 text-sm text-[--ink-soft] space-y-1.5 ${howToOpen ? "block" : "hidden md:block"}`}>
-          <p>Click a tube to select it, then click a target tube to pour.</p>
-          <p>You can only pour onto the <em>same color</em>, or into an empty tube.</p>
-          <p>Win by sorting every color into its own tube.</p>
-        </div>
-      </section>
-
-      {/* Levels grid — only in levels mode */}
-      {mode === "levels" && (
-        <section>
-          <SectionLabel>Levels</SectionLabel>
-          <div className="grid grid-cols-10 gap-1 max-h-52 overflow-y-auto pr-0.5">
-            {Array.from({ length: TOTAL_LEVELS }, (_, i) => {
-              const n      = i + 1;
-              const status = levelStatuses[i] ?? "locked";
-              return (
-                <button
-                  key={n}
-                  ref={n === currentLevel ? el => { currentLevelRef.current = el; } : null}
-                  title={`Level ${n}`}
-                  disabled={status === "locked"}
-                  onClick={() => status !== "locked" && onSelectLevel(n)}
-                  className={[
-                    "w-6 h-6 rounded text-[9px] font-bold transition-colors leading-none",
-                    status === "completed"
-                      ? "bg-[--terracotta]/75 text-white hover:bg-[--terracotta]"
-                      : status === "current"
-                      ? "border-2 border-[--terracotta] text-[--terracotta] bg-transparent"
-                      : "bg-[--paper-deep] text-[--ink-faded] opacity-35 cursor-not-allowed",
-                  ].join(" ")}
-                >
-                  {n}
-                </button>
-              );
-            })}
+      {/* Your Stats */}
+      <div className="px-5 py-4 border-b border-[rgba(42,31,21,0.18)] shrink-0">
+        <h2 className="text-[#8a7355] text-xs font-semibold uppercase tracking-widest mb-3 font-mono">Your Stats</h2>
+        {gamesPlayed === 0 && totalSolved === 0 ? (
+          <p className="text-[#8a7355] text-xs">Play your first game to see stats</p>
+        ) : (
+          <div className="space-y-2.5">
+            {mode === "daily" ? (
+              <>
+                {([
+                  ["🔥", "Streak",       `${streak} day${streak !== 1 ? "s" : ""}`],
+                  ["⚡", "Best streak",  `${bestStreak} day${bestStreak !== 1 ? "s" : ""}`],
+                  ["📅", "Games played", String(gamesPlayed)],
+                  ["🏆", "Win rate",     winRate],
+                ] as [string, string, string][]).map(([icon, label, value]) => (
+                  <div key={label} className="flex items-center justify-between text-sm">
+                    <span className="text-[#5a4632]">{icon} {label}</span>
+                    <span className="text-[#2a1f15] font-semibold tabular-nums">{value}</span>
+                  </div>
+                ))}
+              </>
+            ) : (
+              <>
+                {([
+                  ["🧪", "Levels solved",  String(totalSolved)],
+                  ["🔥", "Streak",         `${streak} day${streak !== 1 ? "s" : ""}`],
+                  ["⚡", "Best streak",    `${bestStreak} day${bestStreak !== 1 ? "s" : ""}`],
+                  ["📅", "Games played",   String(gamesPlayed)],
+                ] as [string, string, string][]).map(([icon, label, value]) => (
+                  <div key={label} className="flex items-center justify-between text-sm">
+                    <span className="text-[#5a4632]">{icon} {label}</span>
+                    <span className="text-[#2a1f15] font-semibold tabular-nums">{value}</span>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
-        </section>
-      )}
+        )}
+      </div>
+
+      {/* Levels grid */}
+      <div className="px-5 py-4 border-b border-[rgba(42,31,21,0.18)] shrink-0">
+        <h2 className="text-[#8a7355] text-xs font-semibold uppercase tracking-widest mb-3 font-mono">Levels</h2>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(10, 14px)",
+          gap: 3,
+          maxHeight: 200,
+          overflowY: "auto",
+        }}>
+          {Array.from({ length: TOTAL_LEVELS }, (_, i) => i + 1).map(n => {
+            const isDone    = doneLevels.has(n);
+            const isCurrent = n === currentLevel;
+            return (
+              <button
+                key={n}
+                ref={isCurrent ? el => { currentLevelRef.current = el; } : null}
+                onClick={() => onSelectLevel(n)}
+                title={`Level ${n}${isDone ? " ✓" : isCurrent ? " (current)" : ""}`}
+                style={{
+                  width: 14, height: 14, borderRadius: 3,
+                  background: (isDone || isCurrent) ? "#c45a3a" : "rgba(42,31,21,0.1)",
+                  opacity: (isCurrent && !isDone) ? 0.5 : 1,
+                  outline: isCurrent ? "2px solid #c45a3a" : "none",
+                  outlineOffset: 1,
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
+                  flexShrink: 0,
+                }}
+              />
+            );
+          })}
+        </div>
+        <p className="text-xs mt-2 font-mono">
+          <span style={{ color: "#c45a3a" }}>{doneLevels.size}</span>
+          <span style={{ color: "#8a7355" }}> / {TOTAL_LEVELS} completed</span>
+        </p>
+      </div>
+
+      {/* How to Play */}
+      <div className="px-5 py-4 border-b border-[rgba(42,31,21,0.18)] shrink-0">
+        <h2 className="text-[#8a7355] text-xs font-semibold uppercase tracking-widest mb-3 font-mono">How to Play</h2>
+        <ol className="space-y-2.5 mb-4">
+          {[
+            { icon: "🧪", text: "Click a tube to select it." },
+            { icon: "💧", text: "Click a target tube to pour the top layer." },
+            { icon: "✅", text: "You can only pour onto the same colour, or into an empty tube." },
+            { icon: "🏆", text: "Win by sorting every colour into its own tube." },
+          ].map((step, i) => (
+            <li key={i} className="flex items-start gap-2 text-xs text-[#5a4632] leading-snug">
+              <span className="shrink-0 mt-px">{step.icon}</span>
+              <span>{step.text}</span>
+            </li>
+          ))}
+        </ol>
+
+        <div className="bg-[var(--paper)] rounded-xl p-3 border border-dashed border-[rgba(42,31,21,0.18)]">
+          <p className="text-[#5a4632] text-xs font-semibold uppercase tracking-widest mb-2 font-mono">Scoring</p>
+          <div className="space-y-1">
+            {SCORING.map(([moves, label]) => (
+              <div key={label} className="flex items-center text-xs gap-2">
+                <span className="text-[#8a7355] w-16 shrink-0 font-mono">{moves}</span>
+                <span className="text-[#2a1f15] font-semibold">{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Also Play */}
-      <RotatingAlsoPlay />
-    </aside>
-  );
-}
-
-function SectionLabel({ children, asSpan }: { children: React.ReactNode; asSpan?: boolean }) {
-  const cls = "block text-[10px] font-semibold text-[--ink-faded] uppercase tracking-widest mb-2";
-  return asSpan
-    ? <span className={cls}>{children}</span>
-    : <div  className={cls}>{children}</div>;
-}
-
-function StatCell({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="bg-[--paper-2] border border-[--rule] rounded-xl p-3 text-center">
-      <div
-        className="text-xl font-bold text-[--ink] leading-tight"
-        style={{ fontFamily: "var(--font-jetbrains)" }}
-      >
-        {value}
+      <div className="px-5 py-4 shrink-0">
+        <h2 className="text-[#8a7355] text-xs font-semibold uppercase tracking-widest mb-3 font-mono">Also Play</h2>
+        <RotatingAlsoPlay />
       </div>
-      <div className="text-[10px] text-[--ink-faded] uppercase tracking-wide mt-0.5">{label}</div>
-    </div>
+
+    </aside>
   );
 }
