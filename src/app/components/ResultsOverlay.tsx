@@ -1,11 +1,20 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { getScoreLabel } from "@/lib/gameLogic";
+import RotatingAlsoPlay from "./RotatingAlsoPlay";
 
-const mono = "'JetBrains Mono', ui-monospace, monospace";
+function getCountdown(): string {
+  const now = new Date();
+  const midnight = new Date();
+  midnight.setHours(24, 0, 0, 0);
+  const diff = Math.max(0, midnight.getTime() - now.getTime());
+  const h = Math.floor(diff / 3_600_000);
+  const m = Math.floor((diff % 3_600_000) / 60_000);
+  const s = Math.floor((diff % 60_000) / 1_000);
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
 
 interface Props {
-  visible: boolean;
   won: boolean;
   stuck: boolean;
   moves: number;
@@ -13,216 +22,216 @@ interface Props {
   mode: "daily" | "levels";
   puzzleNumber?: number;
   levelNumber?: number;
+  onClose: () => void;
   onNextLevel?: () => void;
+  onPlayAgain?: () => void;
   onRestart?: () => void;
-  onClose?: () => void;
 }
 
-function useCountdown() {
-  const [time, setTime] = useState("");
-  useEffect(() => {
-    const tick = () => {
-      const now      = new Date();
-      const midnight = new Date(now);
-      midnight.setHours(24, 0, 0, 0);
-      const diff = midnight.getTime() - now.getTime();
-      const h = Math.floor(diff / 3_600_000);
-      const m = Math.floor((diff % 3_600_000) / 60_000);
-      const s = Math.floor((diff % 60_000) / 1_000);
-      setTime(`${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`);
-    };
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, []);
-  return time;
-}
+const mono = "'JetBrains Mono', ui-monospace, monospace";
 
 export default function ResultsOverlay({
-  visible, won, stuck, moves, par, mode,
-  puzzleNumber, levelNumber, onNextLevel, onRestart, onClose,
+  won, stuck, moves, par, mode, puzzleNumber, levelNumber,
+  onClose, onNextLevel, onPlayAgain, onRestart,
 }: Props) {
-  const countdown = useCountdown();
+  const [countdown, setCountdown] = useState(getCountdown);
   const [copied, setCopied] = useState(false);
 
-  if (!visible || (!won && !stuck)) return null;
+  useEffect(() => {
+    if (mode !== "daily") return;
+    const id = setInterval(() => setCountdown(getCountdown()), 1000);
+    return () => clearInterval(id);
+  }, [mode]);
 
   const label = won ? getScoreLabel(moves, par, false) : "UNSORTED";
-
-  const shareText = mode === "daily"
-    ? `🧪 Sortl #${String(puzzleNumber ?? 1).padStart(3,"0")}\n${
-        won ? `Solved in ${moves} moves ✓` : "Could not sort today 💀"
-      }\nsortl.stoop.games`
-    : `🧪 Sortl Level ${levelNumber}\n${
-        won ? `Solved in ${moves} moves ✓` : "Could not sort 💀"
-      }\nsortl.stoop.games`;
+  const dayStr = String(puzzleNumber ?? 1).padStart(3, "0");
 
   const handleShare = async () => {
-    try {
-      await navigator.clipboard.writeText(shareText);
-    } catch { /* ignore */ }
+    const result = won ? `${label} · ${moves} moves` : label;
+    const text = mode === "daily"
+      ? `🧪 Sortl #${dayStr}\n${result}\nsortl.stoop.games`
+      : `🧪 Sortl Level ${levelNumber}\n${result}\nsortl.stoop.games`;
+
+    try { await navigator.clipboard.writeText(text); } catch { /* ignore */ }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  const puzzleId = mode === "daily"
-    ? `#${String(puzzleNumber ?? 1).padStart(3,"0")}`
-    : `Level #${String(levelNumber).padStart(3,"0")}`;
 
   return (
     <div
       onClick={onClose}
       style={{
-        position: "fixed", inset: 0, zIndex: 200,
+        position: "fixed", inset: 0,
         background: "rgba(42,31,21,0.55)",
+        backdropFilter: "blur(4px)",
+        WebkitBackdropFilter: "blur(4px)",
+        zIndex: 200,
         display: "flex", alignItems: "center", justifyContent: "center",
-        padding: 24,
-        animation: "overlayFadeIn 300ms ease-out both",
+        padding: 16,
       }}
     >
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          position: "relative",
           background: "var(--paper, #f3e9d6)",
-          border: "1px dashed rgba(42,31,21,0.18)",
-          borderRadius: 12,
-          padding: "32px 28px",
-          maxWidth: 340,
+          borderRadius: 16,
           width: "100%",
-          textAlign: "center",
-          fontFamily: mono,
+          maxWidth: 400,
+          maxHeight: "90vh",
+          overflowY: "auto",
+          position: "relative",
+          border: "1px dashed rgba(42,31,21,0.22)",
+          boxShadow: "0 8px 40px rgba(42,31,21,0.18)",
         }}
       >
         {/* X button */}
-        {onClose && (
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          style={{
+            position: "absolute", top: 10, right: 12,
+            background: "none", border: "none", cursor: "pointer",
+            fontFamily: mono, fontSize: 18, color: "var(--ink-faded, #8a7355)",
+            lineHeight: 1, padding: "4px 6px",
+          }}
+        >×</button>
+
+        <div style={{ padding: "24px 24px 20px" }}>
+          {/* Header */}
+          <p style={{
+            fontFamily: mono, fontSize: 10, color: "var(--ink-faded, #8a7355)",
+            letterSpacing: "0.12em", textTransform: "uppercase",
+            margin: "0 0 14px",
+          }}>
+            SORTL #{dayStr} · {mode === "daily" ? "DAILY" : `LEVEL ${levelNumber}`}
+          </p>
+
+          {/* Result label */}
+          <p style={{
+            fontFamily: "'Caprasimo', serif",
+            fontSize: 28, color: "var(--terracotta, #c45a3a)",
+            margin: "0 0 4px", lineHeight: 1.15,
+          }}>{label}</p>
+
+          {/* Moves */}
+          {won && (
+            <>
+              <p style={{
+                fontFamily: "'Newsreader', Georgia, serif",
+                fontSize: 40, fontWeight: 700, color: "var(--ink, #2a1f15)",
+                margin: "8px 0 2px", lineHeight: 1,
+              }}>
+                {moves}
+                <span style={{ fontSize: 20, fontWeight: 400, color: "var(--ink-faded, #8a7355)", marginLeft: 6 }}>
+                  moves
+                </span>
+              </p>
+              <p style={{
+                fontFamily: mono, fontSize: 11, color: "var(--ink-faded, #8a7355)",
+                margin: "2px 0 18px",
+              }}>par {par}</p>
+            </>
+          )}
+
+          {/* Stuck message */}
+          {stuck && (
+            <p style={{
+              fontFamily: "'Newsreader', Georgia, serif",
+              fontSize: 16, color: "var(--ink-soft, #5a4632)",
+              margin: "8px 0 18px", lineHeight: 1.5,
+            }}>No valid moves remain.</p>
+          )}
+
+          {/* Mode-specific content */}
+          {mode === "daily" ? (
+            <div style={{ marginBottom: 16 }}>
+              <p style={{
+                fontFamily: mono, fontSize: 11, color: "var(--ink-soft, #5a4632)",
+                margin: "0 0 8px",
+              }}>🔥 Come back tomorrow to keep your streak!</p>
+              <p style={{
+                fontFamily: mono, fontSize: 20, fontWeight: 600,
+                color: "var(--ink, #2a1f15)", letterSpacing: "0.06em",
+                margin: 0,
+              }}>{countdown}</p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
+              {won && onNextLevel && (
+                <button
+                  onClick={onNextLevel}
+                  style={{
+                    width: "100%", padding: "12px",
+                    background: "var(--terracotta, #c45a3a)", color: "white",
+                    border: "none", borderRadius: 8,
+                    fontFamily: mono, fontSize: 11,
+                    textTransform: "uppercase", letterSpacing: "0.18em",
+                    cursor: "pointer",
+                  }}
+                >Next Level →</button>
+              )}
+              {onPlayAgain && (
+                <button
+                  onClick={onPlayAgain}
+                  style={{
+                    width: "100%", padding: "12px",
+                    background: "transparent",
+                    color: "var(--ink-soft, #5a4632)",
+                    border: "1px dashed rgba(42,31,21,0.3)",
+                    borderRadius: 8,
+                    fontFamily: mono, fontSize: 11,
+                    textTransform: "uppercase", letterSpacing: "0.18em",
+                    cursor: "pointer",
+                  }}
+                >↺ Play again</button>
+              )}
+              {stuck && onRestart && (
+                <button
+                  onClick={onRestart}
+                  style={{
+                    width: "100%", padding: "12px",
+                    background: "transparent",
+                    color: "var(--ink-soft, #5a4632)",
+                    border: "1px dashed rgba(42,31,21,0.3)",
+                    borderRadius: 8,
+                    fontFamily: mono, fontSize: 11,
+                    textTransform: "uppercase", letterSpacing: "0.18em",
+                    cursor: "pointer",
+                  }}
+                >↺ Try again</button>
+              )}
+            </div>
+          )}
+
+          {/* Share button */}
           <button
-            onClick={onClose}
-            aria-label="Close"
+            onClick={handleShare}
             style={{
-              position: "absolute", top: 10, right: 12,
-              background: "none", border: "none",
-              color: "var(--ink-faded, #8a7355)",
-              fontSize: 18, lineHeight: 1,
-              cursor: "pointer", padding: 4,
+              width: "100%", padding: "12px",
+              background: copied ? "#5a4632" : "var(--terracotta, #c45a3a)",
+              color: "white",
+              border: "none", borderRadius: 8,
+              fontFamily: mono, fontSize: 11,
+              textTransform: "uppercase", letterSpacing: "0.18em",
+              cursor: "pointer",
+              transition: "background 0.2s ease",
             }}
-          >
-            ×
-          </button>
-        )}
-
-        {/* Title */}
-        <div style={{
-          fontFamily: "'Caprasimo', serif",
-          fontSize: 28,
-          color: "var(--ink, #2a1f15)",
-          marginBottom: 4,
-        }}>
-          {won ? "🧪" : "😵"} Sortl
+          >{copied ? "✓ Copied!" : "Share"}</button>
         </div>
 
-        {/* Puzzle ID */}
+        {/* Also Play */}
         <div style={{
-          fontSize: 11, color: "var(--ink-faded, #8a7355)",
-          letterSpacing: "0.1em", marginBottom: 20,
+          borderTop: "1px dashed rgba(42,31,21,0.18)",
+          padding: "16px 24px 20px",
         }}>
-          {puzzleId}
+          <p style={{
+            fontFamily: mono, fontSize: 9, letterSpacing: "0.16em",
+            textTransform: "uppercase", color: "var(--ink-faded, #8a7355)",
+            margin: "0 0 10px",
+          }}>Also Play</p>
+          <RotatingAlsoPlay />
         </div>
-
-        {/* Score label */}
-        <div style={{
-          fontSize: 13, fontWeight: 600,
-          color: "var(--terracotta, #c45a3a)",
-          letterSpacing: "0.12em", marginBottom: 8,
-        }}>
-          {label}
-        </div>
-
-        {/* Move count */}
-        {won && (
-          <>
-            <div style={{
-              fontSize: 32, fontWeight: 700,
-              color: "var(--ink, #2a1f15)", marginBottom: 4,
-            }}>
-              {moves}
-            </div>
-            <div style={{ fontSize: 12, color: "var(--ink-faded, #8a7355)", marginBottom: 24 }}>
-              moves · par {par}
-            </div>
-          </>
-        )}
-
-        {/* Stuck message */}
-        {stuck && (
-          <div style={{ fontSize: 12, color: "var(--ink-soft, #5a4632)", marginBottom: 24 }}>
-            No valid moves remain. Better luck next time!
-          </div>
-        )}
-
-        {/* Primary action */}
-        {mode === "levels" && won && onNextLevel ? (
-          <button onClick={onNextLevel} style={primaryBtn}>
-            Next Level →
-          </button>
-        ) : (
-          <button onClick={handleShare} style={primaryBtn}>
-            {copied ? "Copied ✓" : "Share result"}
-          </button>
-        )}
-
-        {/* Secondary: Try Again / Replay */}
-        {(stuck || (mode === "levels" && won)) && onRestart && (
-          <button onClick={onRestart} style={secondaryBtn}>
-            {stuck ? "Try Again" : "Replay"}
-          </button>
-        )}
-
-        {/* Daily countdown */}
-        {mode === "daily" && (
-          <div style={{ marginTop: 16 }}>
-            <div style={{ fontSize: 10, color: "var(--ink-faded, #8a7355)", letterSpacing: "0.1em" }}>
-              NEXT PUZZLE IN
-            </div>
-            <div style={{
-              fontSize: 20, fontWeight: 700,
-              color: "var(--ink, #2a1f15)",
-              letterSpacing: "0.05em", marginTop: 2,
-            }}>
-              {countdown}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
 }
-
-const primaryBtn: React.CSSProperties = {
-  background: "var(--terracotta, #c45a3a)",
-  color: "#fff",
-  border: "none",
-  borderRadius: 8,
-  padding: "12px 28px",
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-  fontSize: 12,
-  letterSpacing: "0.1em",
-  textTransform: "uppercase",
-  cursor: "pointer",
-  width: "100%",
-  marginBottom: 10,
-};
-
-const secondaryBtn: React.CSSProperties = {
-  background: "transparent",
-  color: "var(--ink-faded, #8a7355)",
-  border: "1px dashed rgba(42,31,21,0.18)",
-  borderRadius: 8,
-  padding: "10px 28px",
-  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-  fontSize: 11,
-  letterSpacing: "0.1em",
-  textTransform: "uppercase",
-  cursor: "pointer",
-  width: "100%",
-};

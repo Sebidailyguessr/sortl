@@ -1,39 +1,34 @@
 "use client";
 import { useEffect, useState } from "react";
-import StoopNav from "./components/StoopNav";
-import StoopFooter from "./components/StoopFooter";
 import GameBoard from "./components/GameBoard";
 import Sidebar from "./components/Sidebar";
 
 type Mode = "daily" | "levels";
 
 const MAX_LEVELS = 300;
+const mono = "'JetBrains Mono', ui-monospace, monospace";
 
 function findNextUnsolvedLevel(from: number): number {
   for (let n = from; n <= MAX_LEVELS; n++) {
     if (localStorage.getItem(`sl-level-done-${n}`) !== "true") return n;
   }
-  return MAX_LEVELS; // all done — stay at last
+  return MAX_LEVELS;
 }
 
 export default function Home() {
   const [mode, setMode]               = useState<Mode>("daily");
   const [currentLevel, setCurrentLevel] = useState(1);
+  const [sidebarKey, setSidebarKey]   = useState(0);
 
-  // ── Hydrate from localStorage ────────────────────────────────────────────
   useEffect(() => {
     try {
-      // Mode
       const savedMode = localStorage.getItem("sl-mode") as Mode | null;
-      const activeMode: Mode = (savedMode === "daily" || savedMode === "levels")
-        ? savedMode : "daily";
+      const activeMode: Mode = (savedMode === "daily" || savedMode === "levels") ? savedMode : "daily";
       setMode(activeMode);
 
-      // Level — ensure key exists
       let savedLevel = Number(localStorage.getItem("sl-current-level") || 0);
       if (savedLevel < 1) savedLevel = 1;
 
-      // If opening in levels mode, skip already-completed levels
       if (activeMode === "levels") {
         savedLevel = findNextUnsolvedLevel(savedLevel);
       }
@@ -43,13 +38,11 @@ export default function Home() {
     } catch {}
   }, []);
 
-  // ── Mode toggle ──────────────────────────────────────────────────────────
   function handleModeChange(m: Mode) {
     setMode(m);
     try {
       localStorage.setItem("sl-mode", m);
       if (m === "levels") {
-        // Jump to first unsolved level if current is already done
         const next = findNextUnsolvedLevel(currentLevel);
         if (next !== currentLevel) {
           setCurrentLevel(next);
@@ -59,25 +52,22 @@ export default function Home() {
     } catch {}
   }
 
-  // ── Level completion (called from GameBoard) ─────────────────────────────
   function handleLevelComplete(level: number, moves: number) {
     try {
       const alreadyDone = localStorage.getItem(`sl-level-done-${level}`) === "true";
       localStorage.setItem(`sl-level-done-${level}`, "true");
-      // Best score — always update if improved
-      const best = localStorage.getItem(`sl-best-${level}`);
+      const best = localStorage.getItem(`sl-level-best-${level}`);
       if (!best || moves < Number(best)) {
-        localStorage.setItem(`sl-best-${level}`, String(moves));
+        localStorage.setItem(`sl-level-best-${level}`, String(moves));
       }
-      // Total solved — only count once per level
       if (!alreadyDone) {
         const solved = Number(localStorage.getItem("sl-total-solved") || 0);
         localStorage.setItem("sl-total-solved", String(solved + 1));
       }
+      setSidebarKey(k => k + 1);
     } catch {}
   }
 
-  // ── Next level — skip already-completed ──────────────────────────────────
   function handleNextLevel() {
     try {
       const next = findNextUnsolvedLevel(currentLevel + 1);
@@ -88,31 +78,112 @@ export default function Home() {
 
   function handleSelectLevel(n: number) {
     setCurrentLevel(n);
+    setMode("levels");
+    setSidebarKey(k => k + 1);
     try { localStorage.setItem("sl-current-level", String(n)); } catch {}
+  }
+
+  function handlePlayAgain(level: number) {
+    try {
+      localStorage.removeItem(`sl-level-done-${level}`);
+      localStorage.removeItem(`sl-level-best-${level}`);
+      setSidebarKey(k => k + 1);
+    } catch {}
   }
 
   return (
     <>
-      <StoopNav />
-      <main className="flex flex-col lg:flex-row min-h-[calc(100vh-44px)]">
-        <div className="flex-1 min-w-0 flex flex-col items-center">
-          <GameBoard
-            mode={mode}
-            onModeChange={handleModeChange}
-            currentLevel={currentLevel}
-            onLevelComplete={handleLevelComplete}
-            onNextLevel={handleNextLevel}
-          />
+      <div className="w-full px-4 flex gap-6 items-stretch flex-1">
+
+        {/* Game area */}
+        <div className="flex-1 flex flex-col items-center pt-6">
+          <div className="w-full max-w-2xl">
+            <GameBoard
+              mode={mode}
+              onModeChange={handleModeChange}
+              currentLevel={currentLevel}
+              onLevelComplete={handleLevelComplete}
+              onNextLevel={handleNextLevel}
+              onPlayAgain={handlePlayAgain}
+            />
+          </div>
         </div>
-        <div>
-          <Sidebar
-            mode={mode}
-            currentLevel={currentLevel}
-            onSelectLevel={handleSelectLevel}
-          />
+
+        {/* Sidebar — key forces remount after win so stats refresh */}
+        <div className="hidden lg:block w-72 shrink-0">
+          <Sidebar key={sidebarKey} mode={mode} currentLevel={currentLevel} onSelectLevel={handleSelectLevel} />
         </div>
-      </main>
-      <StoopFooter />
+
+      </div>
+
+      {/* Separator */}
+      <div style={{ borderTop: "1px dashed rgba(42,31,21,0.18)", width: "100%" }} />
+
+      {/* Below-the-fold content */}
+      <div className="w-full max-w-2xl mx-auto px-4 py-16">
+
+        {(() => {
+          const SectionHeader = ({ children }: { children: string }) => (
+            <div className="flex items-center gap-3 mb-4">
+              <div style={{ width: 32, height: 2, background: "var(--terracotta, #c45a3a)", flexShrink: 0 }} />
+              <span style={{ fontFamily: mono, fontSize: 10, color: "var(--ink-faded, #8a7355)", textTransform: "uppercase", letterSpacing: "0.18em", fontWeight: 600 }}>{children}</span>
+            </div>
+          );
+          const Body = ({ children }: { children: React.ReactNode }) => (
+            <div style={{ fontFamily: "'Newsreader', serif", fontSize: 16, color: "var(--ink-soft, #5a4632)", lineHeight: 1.65, maxWidth: "65ch" }}>{children}</div>
+          );
+          const P = ({ children }: { children: string }) => (
+            <p style={{ marginBottom: "1rem" }}>{children}</p>
+          );
+          return (
+            <>
+              <section className="mb-12">
+                <SectionHeader>What is Sortl?</SectionHeader>
+                <Body>
+                  <P>Sortl is a free daily liquid sorting puzzle. Every day at midnight a new puzzle is published — the same one for every player around the world. Test tubes are filled with layers of coloured liquid. Your job is to sort them so each tube contains only one colour.</P>
+                  <P>Click a source tube to select the top layer, then click a destination tube to pour it. You can only pour onto the same colour or into an empty tube. Solve the puzzle in as few moves as possible.</P>
+                </Body>
+              </section>
+
+              <section className="mb-12">
+                <SectionHeader>How Scoring Works</SectionHeader>
+                <Body>
+                  <P>Sortl scores you against par — the minimum number of moves needed to solve the puzzle. Matching or beating par earns a FLAWLESS SORT. Each move over par increases your label from CLEAN SORT through DECENT SORT and MESSY SORT. Getting stuck gives you UNSORTED.</P>
+                </Body>
+              </section>
+
+              <section className="mb-12">
+                <SectionHeader>Tips</SectionHeader>
+                <Body>
+                  {[
+                    "Start by identifying which tubes are closest to being sorted — one or two moves away.",
+                    "Empty tubes are valuable — use them as temporary storage, not just final destinations.",
+                    "If you get stuck, use Undo rather than Restart to save moves.",
+                    "In harder levels, you often need to \"unpack\" a tube before you can sort it properly.",
+                    "Your streak resets if you miss a day — come back every day to keep it alive.",
+                  ].map((tip, i) => (
+                    <p key={i} style={{ marginBottom: "0.75rem" }}>→ {tip}</p>
+                  ))}
+                </Body>
+              </section>
+
+              <section className="mb-12">
+                <SectionHeader>One Puzzle Per Day</SectionHeader>
+                <Body>
+                  <P>{"There's no \"play again\" for the daily puzzle. One puzzle, one attempt, same for everyone. Want more? Switch to Levels mode for 300 puzzles at your own pace, from easy 4-tube puzzles to expert 7-tube challenges."}</P>
+                </Body>
+              </section>
+
+              <section>
+                <SectionHeader>Free, Forever</SectionHeader>
+                <Body>
+                  <P>No account. No subscription. No ads. Sortl is completely free to play and always will be.</P>
+                </Body>
+              </section>
+            </>
+          );
+        })()}
+      </div>
     </>
   );
 }

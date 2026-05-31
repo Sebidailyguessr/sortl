@@ -131,10 +131,11 @@ interface Props {
   currentLevel: number;
   onLevelComplete: (level: number, moves: number) => void;
   onNextLevel: () => void;
+  onPlayAgain?: (level: number) => void;
 }
 
 export default function GameBoard({
-  mode, onModeChange, currentLevel, onLevelComplete, onNextLevel,
+  mode, onModeChange, currentLevel, onLevelComplete, onNextLevel, onPlayAgain,
 }: Props) {
   const [levelConfig, setLevelConfig] = useState<LevelConfig | null>(null);
   const [gameState, setGameState]     = useState<GameState | null>(null);
@@ -145,6 +146,7 @@ export default function GameBoard({
   const [showOverlay, setShowOverlay] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [compact, setCompact]         = useState(false);
+  const [savedResult, setSavedResult] = useState<{ moves: number; par: number } | null>(null);
 
   const tubeRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const invalidTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -176,6 +178,16 @@ export default function GameBoard({
       }
     } else {
       config = generateLevel(currentLevel * 7919, currentLevel);
+      if (localStorage.getItem(`sl-level-done-${currentLevel}`) === "true") {
+        const savedMoves = parseInt(localStorage.getItem(`sl-level-best-${currentLevel}`) ?? "0");
+        const computedPar = calcPar(config.tubes, config.tubeCapacity);
+        setLevelConfig(config);
+        setGameState(makeInitialState(config.tubes, config.tubeCapacity));
+        setSelected(null);
+        setSavedResult({ moves: savedMoves, par: computedPar });
+        setShowOverlay(true);
+        return;
+      }
     }
     setLevelConfig(config);
     setGameState(makeInitialState(config.tubes, config.tubeCapacity));
@@ -251,6 +263,7 @@ export default function GameBoard({
     setPulsing(false);
     setAnimState(null);
     setSelected(null);
+    setSavedResult(null);
     prevWon.current   = false;
     prevStuck.current = false;
   }
@@ -327,6 +340,13 @@ export default function GameBoard({
 
   function handleRestart() {
     if (!levelConfig) return;
+    resetOverlayState();
+    setGameState(makeInitialState(levelConfig.tubes, levelConfig.tubeCapacity));
+  }
+
+  function handlePlayAgainLevel() {
+    if (!levelConfig) return;
+    onPlayAgain?.(currentLevel);
     resetOverlayState();
     setGameState(makeInitialState(levelConfig.tubes, levelConfig.tubeCapacity));
   }
@@ -468,19 +488,21 @@ export default function GameBoard({
       {showConfetti && <Confetti />}
 
       {/* Results overlay */}
-      <ResultsOverlay
-        visible={showOverlay}
-        won={gameState.won}
-        stuck={gameState.stuck}
-        moves={gameState.moves}
-        par={par}
-        mode={mode}
-        puzzleNumber={puzzleNumber}
-        levelNumber={currentLevel}
-        onNextLevel={handleNextLevel}
-        onRestart={handleRestart}
-        onClose={() => setShowOverlay(false)}
-      />
+      {showOverlay && (
+        <ResultsOverlay
+          won={savedResult !== null || gameState.won}
+          stuck={savedResult === null && gameState.stuck}
+          moves={savedResult?.moves ?? gameState.moves}
+          par={savedResult?.par ?? par}
+          mode={mode}
+          puzzleNumber={puzzleNumber}
+          levelNumber={currentLevel}
+          onClose={() => { setShowOverlay(false); setSavedResult(null); }}
+          onNextLevel={handleNextLevel}
+          onPlayAgain={mode === "levels" && (savedResult !== null || gameState.won) ? handlePlayAgainLevel : undefined}
+          onRestart={savedResult === null && gameState.stuck ? handleRestart : undefined}
+        />
+      )}
     </div>
   );
 }
