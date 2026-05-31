@@ -172,8 +172,10 @@ export default function GameBoard({
       config = getDailyLevel(dateKey);
       const saved = loadLS<Partial<GameState>>(`sl-daily-${dateKey}`);
       if (saved?.tubes) {
+        const loadedState = { ...makeInitialState(config.tubes, config.tubeCapacity), ...saved } as GameState;
         setLevelConfig(config);
-        setGameState({ ...makeInitialState(config.tubes, config.tubeCapacity), ...saved } as GameState);
+        setGameState(loadedState);
+        if (loadedState.won || loadedState.stuck) setShowOverlay(true);
         return;
       }
     } else {
@@ -369,7 +371,6 @@ export default function GameBoard({
   }
 
   const isDailyDone = mode === "daily" && (gameState.won || gameState.stuck);
-  const isBlocked   = animState !== null || gameState.won || gameState.stuck;
 
   // During animation: hide flying layer from source tube
   const displayTubes = animState
@@ -395,7 +396,7 @@ export default function GameBoard({
         {(["daily", "levels"] as Mode[]).map(m => (
           <button
             key={m}
-            onClick={() => !isBlocked && onModeChange(m)}
+            onClick={() => onModeChange(m)}
             style={{
               padding: "8px 20px",
               background: mode === m ? "var(--terracotta, #c45a3a)" : "transparent",
@@ -452,7 +453,6 @@ export default function GameBoard({
           </button>
           <button
             onClick={handleRestart}
-            disabled={isDailyDone}
             style={ctrlBtn}
           >
             ↺ Restart
