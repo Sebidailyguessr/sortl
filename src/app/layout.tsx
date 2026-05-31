@@ -86,10 +86,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Umami analytics — set NEXT_PUBLIC_UMAMI_WEBSITE_ID in Vercel env vars */}
         {process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
           <Script
-            src="https://umami.stoop.games/script.js"
-            data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
-            strategy="afterInteractive"
-          />
+  src="https://analytics.stoop.games/script.js"
+  data-website-id="58d57aa4-6898-4152-b1a7-4d5a109132ee"
+  strategy="afterInteractive"
+/>
         )}
       </body>
     </html>
