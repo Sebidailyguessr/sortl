@@ -47,7 +47,11 @@ export default function ResultsOverlay({
   const dayStr = String(puzzleNumber ?? 1).padStart(3, "0");
 
   const handleShare = async () => {
-    const result = won ? `${label} · ${moves} moves` : label;
+    const result = won
+      ? `${label} · ${moves} moves`
+      : mode === "daily"
+        ? "UNSORTED — the tubes beat me today"
+        : "UNSORTED";
     const text = mode === "daily"
       ? `🧪 Sortl #${dayStr}\n${result}\nsortl.stoop.games`
       : `🧪 Sortl Level ${levelNumber}\n${result}\nsortl.stoop.games`;

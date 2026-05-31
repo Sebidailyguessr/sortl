@@ -152,6 +152,7 @@ export default function GameBoard({
   const invalidTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevWon   = useRef(false);
   const prevStuck = useRef(false);
+  const winMovesRef = useRef(0);
 
   const dateKey      = getTodayKey();
   const puzzleNumber = getPuzzleNumber(dateKey);
@@ -253,7 +254,7 @@ export default function GameBoard({
       localStorage.setItem("sl-last-played", dateKey);
     }
 
-    if (mode === "levels" && gameState.won) onLevelComplete(currentLevel, gameState.moves);
+    if (mode === "levels" && gameState.won) onLevelComplete(currentLevel, winMovesRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState?.won, gameState?.stuck]);
 
@@ -268,6 +269,7 @@ export default function GameBoard({
     setSavedResult(null);
     prevWon.current   = false;
     prevStuck.current = false;
+    winMovesRef.current = 0;
   }
 
   const lh = compact ? LAYER_H.compact : LAYER_H.full;
@@ -280,10 +282,12 @@ export default function GameBoard({
         const newTubes = applyMove(prev.tubes, fromIdx, toIdx);
         const won   = isWon(newTubes, levelConfig.tubeCapacity);
         const stuck = !won && isStuck(newTubes, levelConfig.tubeCapacity);
+        const moves = prev.moves + 1;
+        if (won) winMovesRef.current = moves;
         return {
           ...prev,
           tubes:   newTubes,
-          moves:   prev.moves + 1,
+          moves,
           history: [...prev.history, prev.tubes],
           won,
           stuck,
@@ -486,6 +490,48 @@ export default function GameBoard({
 
       {/* Confetti on win */}
       {showConfetti && <Confetti />}
+
+      {/* 📊 Results button — shown when game is over and overlay is dismissed */}
+      {(gameState.won || gameState.stuck || savedResult !== null) && !showOverlay && (
+        <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", marginTop: 8 }}>
+          <button
+            onClick={() => setShowOverlay(true)}
+            style={{
+              padding: "10px 22px",
+              background: "transparent",
+              color: "var(--ink-soft, #5a4632)",
+              border: "1px dashed rgba(42,31,21,0.3)",
+              borderRadius: 8,
+              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+              fontSize: 11,
+              textTransform: "uppercase",
+              letterSpacing: "0.18em",
+              cursor: "pointer",
+            }}
+          >
+            📊 Results
+          </button>
+          {mode === "levels" && (gameState.won || savedResult !== null) && (
+            <button
+              onClick={handleNextLevel}
+              style={{
+                padding: "10px 22px",
+                background: "var(--terracotta, #c45a3a)",
+                color: "white",
+                border: "none",
+                borderRadius: 8,
+                fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                fontSize: 11,
+                textTransform: "uppercase",
+                letterSpacing: "0.18em",
+                cursor: "pointer",
+              }}
+            >
+              Next Level →
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Results overlay */}
       {showOverlay && (
