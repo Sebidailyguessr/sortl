@@ -294,6 +294,7 @@ export default function GameBoard({
         };
       });
       setAnimState(null);
+      setSavedResult(null);
     },
     [levelConfig]
   );
@@ -543,7 +544,7 @@ export default function GameBoard({
           mode={mode}
           puzzleNumber={puzzleNumber}
           levelNumber={currentLevel}
-          onClose={() => { setShowOverlay(false); setSavedResult(null); }}
+          onClose={() => setShowOverlay(false)}
           onNextLevel={handleNextLevel}
           onPlayAgain={mode === "levels" && (savedResult !== null || gameState.won) ? handlePlayAgainLevel : undefined}
           onRestart={savedResult === null && gameState.stuck ? handleRestart : undefined}
