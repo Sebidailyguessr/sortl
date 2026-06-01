@@ -16,7 +16,7 @@ export default function AboutPage() {
       </h1>
 
       <p style={{ fontFamily: 'var(--serif)', color: 'var(--ink-soft)', lineHeight: 1.7, marginBottom: 16 }}>
-        Sortl is a daily liquid sorting puzzle. Test tubes are filled with layers of coloured
+        <strong>Sortl</strong> is a daily liquid sorting puzzle. Test tubes are filled with layers of coloured
         liquid. Move liquid from tube to tube — you can only pour onto a matching colour or
         into an empty tube. Sort every tube so it contains a single colour, in as few moves
         as possible.
@@ -27,7 +27,10 @@ export default function AboutPage() {
         locally in your browser.
       </p>
 
-      <h2 className="seo-h2" style={{ marginTop: 40 }}>More games on Stoop</h2>
+      <hr style={{ border: 'none', borderTop: '1px dashed rgba(42,31,21,0.18)', margin: '40px 0 28px' }} />
+      <h2 className="seo-h2" style={{ fontFamily: 'var(--mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.18em', color: 'var(--ink-faded)', fontWeight: 400, marginBottom: 16 }}>
+        More games on Stoop
+      </h2>
       <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
         {[
           { label: 'DailyGuessr', href: 'https://dailyguessr.app', desc: 'Guess the place from a street view photo' },

@@ -176,7 +176,6 @@ export default function GameBoard({
         const loadedState = { ...makeInitialState(config.tubes, config.tubeCapacity), ...saved } as GameState;
         setLevelConfig(config);
         setGameState(loadedState);
-        if (loadedState.won || loadedState.stuck) setShowOverlay(true);
         return;
       }
     } else {
@@ -188,7 +187,6 @@ export default function GameBoard({
         setGameState(makeInitialState(config.tubes, config.tubeCapacity));
         setSelected(null);
         setSavedResult({ moves: savedMoves, par: computedPar });
-        setShowOverlay(true);
         return;
       }
     }
