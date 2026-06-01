@@ -88,6 +88,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
         </main>
         <StoopFooter currentGame="sortl" />
+        <nav aria-label="More Stoop games" style={{ borderTop: '1px dashed rgba(42,31,21,0.18)', background: '#f3e9d6', padding: '24px 16px', textAlign: 'center' }}>
+          <p style={{ fontFamily: 'var(--mono, "JetBrains Mono", monospace)', fontSize: 11, color: '#8a7355', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>More Stoop games</p>
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px 24px' }}>
+            <li><a href="https://dailyguessr.app" style={{ fontFamily: 'var(--serif, Georgia, serif)', fontSize: 14, color: '#5a4632', textDecoration: 'none' }}>DailyGuessr</a></li>
+            <li><a href="https://flagguessr.app" style={{ fontFamily: 'var(--serif, Georgia, serif)', fontSize: 14, color: '#5a4632', textDecoration: 'none' }}>FlagGuessr</a></li>
+            <li><a href="https://cocktailguessr.app" style={{ fontFamily: 'var(--serif, Georgia, serif)', fontSize: 14, color: '#5a4632', textDecoration: 'none' }}>CocktailGuessr</a></li>
+            <li><a href="https://palette.stoop.games" style={{ fontFamily: 'var(--serif, Georgia, serif)', fontSize: 14, color: '#5a4632', textDecoration: 'none' }}>Palette</a></li>
+            <li><a href="https://bloom.stoop.games" style={{ fontFamily: 'var(--serif, Georgia, serif)', fontSize: 14, color: '#5a4632', textDecoration: 'none' }}>Bloom</a></li>
+          </ul>
+        </nav>
         {process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
           <Script
             src="https://analytics.stoop.games/script.js"
