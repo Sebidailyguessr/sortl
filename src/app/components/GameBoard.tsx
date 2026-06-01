@@ -187,6 +187,7 @@ export default function GameBoard({
         setGameState(makeInitialState(config.tubes, config.tubeCapacity));
         setSelected(null);
         setSavedResult({ moves: savedMoves, par: computedPar });
+        setShowOverlay(true);
         return;
       }
     }

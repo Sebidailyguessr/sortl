@@ -11,7 +11,7 @@ export default function AboutPage() {
         ← Back to game
       </Link>
 
-      <h1 style={{ fontFamily: 'var(--display)', fontSize: 32, color: 'var(--ink)', marginBottom: 24 }}>
+      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: 'var(--ink)', marginBottom: 24 }}>
         About Sortl
       </h1>
 
@@ -27,8 +27,8 @@ export default function AboutPage() {
         locally in your browser.
       </p>
 
-      <hr style={{ border: 'none', borderTop: '1px dashed rgba(42,31,21,0.18)', margin: '40px 0 28px' }} />
-      <h2 className="seo-h2" style={{ fontFamily: 'var(--mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.18em', color: 'var(--ink-faded)', fontWeight: 400, marginBottom: 16 }}>
+      <h2 className="seo-h2" style={{ fontFamily: 'var(--mono)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.18em', color: 'var(--ink-faded)', fontWeight: 400, marginTop: 40, marginBottom: 16 }}>
+        <span aria-hidden="true">——</span>
         More games on Stoop
       </h2>
       <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
