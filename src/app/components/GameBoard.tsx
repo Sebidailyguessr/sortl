@@ -153,6 +153,7 @@ export default function GameBoard({
   const prevWon   = useRef(false);
   const prevStuck = useRef(false);
   const winMovesRef = useRef(0);
+  const justFinishedRef = useRef(false);
 
   const dateKey      = getTodayKey();
   const puzzleNumber = getPuzzleNumber(dateKey);
@@ -206,6 +207,7 @@ export default function GameBoard({
   useEffect(() => {
     if (gameState?.won && !prevWon.current) {
       prevWon.current = true;
+      if (!justFinishedRef.current) return;
       setPulsing(true);
       const t = setTimeout(() => {
         setPulsing(false);
@@ -216,6 +218,7 @@ export default function GameBoard({
     }
     if (gameState?.stuck && !prevStuck.current) {
       prevStuck.current = true;
+      if (!justFinishedRef.current) return;
       const t = setTimeout(() => setShowOverlay(true), 300);
       return () => clearTimeout(t);
     }
@@ -266,9 +269,10 @@ export default function GameBoard({
     setAnimState(null);
     setSelected(null);
     setSavedResult(null);
-    prevWon.current   = false;
-    prevStuck.current = false;
-    winMovesRef.current = 0;
+    prevWon.current      = false;
+    prevStuck.current    = false;
+    winMovesRef.current  = 0;
+    justFinishedRef.current = false;
   }
 
   const lh = compact ? LAYER_H.compact : LAYER_H.full;
@@ -283,6 +287,7 @@ export default function GameBoard({
         const stuck = !won && isStuck(newTubes, levelConfig.tubeCapacity);
         const moves = prev.moves + 1;
         if (won) winMovesRef.current = moves;
+        if (won || stuck) justFinishedRef.current = true;
         return {
           ...prev,
           tubes:   newTubes,
