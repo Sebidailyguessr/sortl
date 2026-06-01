@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import GameBoard from "./components/GameBoard";
 import Sidebar from "./components/Sidebar";
 
@@ -146,9 +146,42 @@ export default function Home() {
               </section>
 
               <section className="mb-12">
+                <SectionHeader>How to Play</SectionHeader>
+                <Body>
+                  {[
+                    ["Step 1 — Read the board", "Each tube shows its layers top to bottom. You can only move the top layer of any tube, so plan around what's exposed now, not what's buried."],
+                    ["Step 2 — Select and pour", "Click (or tap) a tube to pick up its top layer, then click a second tube to pour it. Click the same tube again to cancel the selection."],
+                    ["Step 3 — Follow the two rules", "A layer can only move onto a matching colour, or into a fully empty tube. You can't pour onto a different colour, and you can't overfill a tube past its capacity."],
+                    ["Step 4 — Pour in runs", "If the top of a tube has several same-coloured layers stacked together, they all move at once onto a matching destination — one efficient move instead of several wasteful ones."],
+                    ["Step 5 — Sort every tube", "You win the moment each tube holds a single colour or is empty. Do it in as few moves as possible to beat par and earn a Flawless Sort."],
+                  ].map(([title, body], i) => (
+                    <p key={i} style={{ marginBottom: "1rem" }}>
+                      <strong style={{ color: "#2a1f15", display: "block", marginBottom: 2 }}>{title}</strong>
+                      {body}
+                    </p>
+                  ))}
+                </Body>
+              </section>
+
+              <section className="mb-12">
                 <SectionHeader>How Scoring Works</SectionHeader>
                 <Body>
-                  <P>Sortl scores you against par — the minimum number of moves needed to solve the puzzle. Matching or beating par earns a FLAWLESS SORT. Each move over par increases your label from CLEAN SORT through DECENT SORT and MESSY SORT. Getting stuck gives you UNSORTED.</P>
+                  <P>{"Sortl scores you against par — the minimum number of moves needed to solve the day's puzzle. The puzzle is always solvable cleanly, but there are usually messier routes that technically work too, so the real challenge isn't just finishing — it's finishing without wasted pours."}</P>
+                  <P>Matching or beating par earns the top tier. Every move over par nudges your label down. Undo is there if you back yourself into a corner, but a tidy first solve is what earns a Flawless Sort.</P>
+                  <div style={{ marginTop: "0.5rem", display: "grid", gridTemplateColumns: "7rem 1fr", rowGap: "0.35rem" }}>
+                    {[
+                      ["≤ par",    "FLAWLESS SORT"],
+                      ["par +1–3", "CLEAN SORT"],
+                      ["par +4–8", "DECENT SORT"],
+                      ["par +9+",  "MESSY SORT"],
+                      ["stuck",    "UNSORTED"],
+                    ].map(([range, label]) => (
+                      <Fragment key={range}>
+                        <span style={{ fontFamily: "monospace", fontSize: 11, color: "#c45a3a", letterSpacing: "0.06em", alignSelf: "baseline", paddingTop: 2 }}>{range}</span>
+                        <span style={{ fontSize: 15 }}>{label}</span>
+                      </Fragment>
+                    ))}
+                  </div>
                 </Body>
               </section>
 
@@ -177,7 +210,8 @@ export default function Home() {
               <section>
                 <SectionHeader>Free, Forever</SectionHeader>
                 <Body>
-                  <P>No account. No subscription. No ads. Sortl is completely free to play and always will be.</P>
+                  <P>{"No account. No subscription. No ads mid-solve. Sortl is completely free to play and always will be — it runs entirely in your browser, and your streak and stats are saved locally on your device."}</P>
+                  <P>{"It's part of Stoop, a small collection of free daily browser games built by one person who thinks the internet is better with little puzzles in it. Open it, sort your tubes, and come back tomorrow."}</P>
                 </Body>
               </section>
             </>
