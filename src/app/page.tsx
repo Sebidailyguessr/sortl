@@ -207,11 +207,32 @@ export default function Home() {
                 </Body>
               </section>
 
-              <section>
+              <section className="mb-12">
                 <SectionHeader>Free, Forever</SectionHeader>
                 <Body>
                   <P>{"No account. No subscription. No ads mid-solve. Sortl is completely free to play and always will be — it runs entirely in your browser, and your streak and stats are saved locally on your device."}</P>
                   <P>{"It's part of Stoop, a small collection of free daily browser games built by one person who thinks the internet is better with little puzzles in it. Open it, sort your tubes, and come back tomorrow."}</P>
+                </Body>
+              </section>
+
+              <section className="mb-12">
+                <SectionHeader>Why Liquid Sort?</SectionHeader>
+                <Body>
+                  <P>{"Liquid sort is one of the most satisfying logic puzzles because the rules click into place in seconds but mastery takes much longer. Every pour is permanent for the duration of a round — there's no shuffling layers around freely — so each move commits you to a path. That forward pressure is what makes it work as a daily game. You get one shot at the puzzle, the same one as everyone else in the world, and then you wait until tomorrow. That combination of constraint and ritual is what keeps it interesting."}</P>
+                </Body>
+              </section>
+
+              <section className="mb-12">
+                <SectionHeader>How Sortl Compares</SectionHeader>
+                <Body>
+                  <P>{"Most daily puzzles involve a word, a photo, or a list you're slowly narrowing down through guesses. Sortl is different: there's nothing to guess. Either you find the right sequence of pours or you don't — luck plays no role at all. That puts it closer to Sudoku or nonograms than to Wordle. If you enjoy puzzles where the solution is a logical fact rather than a lucky deduction, this is the format for you. One board, one solution, no randomness, same for everyone."}</P>
+                </Body>
+              </section>
+
+              <section>
+                <SectionHeader>Play More Stoop Games</SectionHeader>
+                <Body>
+                  <P>Sortl is part of Stoop, a small network of free daily browser games. Each one runs a single puzzle per day — same schedule, no accounts, no ads. If you liked this one: geography at dailyguessr.app, flags at flagguessr.app, cocktails at cocktailguessr.app, colour matching at palette.stoop.games, and a floral puzzle at bloom.stoop.games. All free, all daily, all reset at midnight UTC.</P>
                 </Body>
               </section>
             </>
