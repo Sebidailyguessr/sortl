@@ -9,6 +9,7 @@ import {
 } from "@/lib/gameLogic";
 import { getDailyLevel, getTodayKey, getPuzzleNumber } from "@/lib/daily";
 import { generateLevel } from "@/lib/levels";
+import { trackEvent } from "@/utils/trackEvent";
 
 type Mode = "daily" | "levels";
 
@@ -147,6 +148,7 @@ export default function GameBoard({
   const [showConfetti, setShowConfetti] = useState(false);
   const [compact, setCompact]         = useState(false);
   const [savedResult, setSavedResult] = useState<{ moves: number; par: number } | null>(null);
+  const [hydrated, setHydrated] = useState(false);
 
   const tubeRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const invalidTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -165,6 +167,19 @@ export default function GameBoard({
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
+
+  useEffect(() => { setHydrated(true); }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    if (mode === "daily") {
+      const lastPlayed = localStorage.getItem("sl-last-played");
+      if (lastPlayed !== dateKey) {
+        trackEvent('puzzle_started', { game: 'sl', puzzleNo: puzzleNumber });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated]);
 
   // ── Load/init level ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -236,6 +251,10 @@ export default function GameBoard({
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const yKey = yesterday.toISOString().slice(0, 10);
+
+      const m = gameState.moves;
+      const scoreBand = !gameState.won ? 'low' : m <= par ? 'perfect' : m <= par + 3 ? 'great' : m <= par + 8 ? 'good' : 'ok';
+      trackEvent('puzzle_completed', { game: 'sl', puzzleNo: puzzleNumber, scoreBand });
 
       // games-played increments on any completion (win or stuck)
       const played = Number(localStorage.getItem("sl-games-played") || 0);

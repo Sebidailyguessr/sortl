@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { getScoreLabel } from "@/lib/gameLogic";
 import RotatingAlsoPlay from "./RotatingAlsoPlay";
+import { trackEvent } from "@/utils/trackEvent";
 
 function getCountdown(): string {
   const now = new Date();
@@ -47,6 +48,7 @@ export default function ResultsOverlay({
   const dayStr = String(puzzleNumber ?? 1).padStart(3, "0");
 
   const handleShare = async () => {
+    if (mode === "daily") trackEvent('share_clicked', { game: 'sl', puzzleNo: puzzleNumber })
     const result = won
       ? `${label} · ${moves} moves`
       : mode === "daily"
@@ -222,7 +224,7 @@ export default function ResultsOverlay({
             }}
           >{copied ? "✓ Copied!" : "Share"}</button>
 
-          <a href='https://ko-fi.com/stoopgames' target='_blank' rel='noopener noreferrer' style={{display:'block',textAlign:'center',fontFamily:'monospace',fontSize:'11px',color:'#8a7355',letterSpacing:'0.05em',textDecoration:'none',marginTop:'12px'}}>☕ enjoyed it? buy me a coffee</a>
+          <a href='https://ko-fi.com/stoopgames' target='_blank' rel='noopener noreferrer' onClick={() => trackEvent('kofi_clicked', { game: 'sl' })} style={{display:'block',textAlign:'center',fontFamily:'monospace',fontSize:'11px',color:'#8a7355',letterSpacing:'0.05em',textDecoration:'none',marginTop:'12px'}}>☕ enjoyed it? buy me a coffee</a>
         </div>
 
         {/* Also Play */}

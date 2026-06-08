@@ -2,6 +2,7 @@
 import { Fragment, useEffect, useState } from "react";
 import GameBoard from "./components/GameBoard";
 import Sidebar from "./components/Sidebar";
+import { trackEvent } from "@/utils/trackEvent";
 
 type Mode = "daily" | "levels";
 
@@ -19,6 +20,18 @@ export default function Home() {
   const [mode, setMode]               = useState<Mode>("daily");
   const [currentLevel, setCurrentLevel] = useState(1);
   const [sidebarKey, setSidebarKey]   = useState(0);
+
+  useEffect(() => {
+    try {
+      const lastPlayed = localStorage.getItem("sl-last-played");
+      if (lastPlayed) {
+        const daysSince = Math.floor((Date.now() - new Date(lastPlayed).getTime()) / 86_400_000);
+        if (daysSince < 8) trackEvent('returning_player', { game: 'sl', daysSince });
+      } else {
+        trackEvent('first_visit', { game: 'sl' });
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   useEffect(() => {
     try {
