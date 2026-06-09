@@ -34,6 +34,14 @@ const mono = "'JetBrains Mono', ui-monospace, monospace";
 
 const STREAK_MILESTONES = [3, 7, 14, 30]
 
+function getEmojiRow(won: boolean, moves: number, par: number): string {
+  if (!won) return '🟥🟥🟥🟥🟥'
+  if (moves <= par)     return '🟩🟩🟩🟩🟩'
+  if (moves <= par + 3) return '🟩🟩🟩🟩⬛'
+  if (moves <= par + 8) return '🟩🟩🟩⬛⬛'
+  return '🟩🟩⬛⬛⬛'
+}
+
 export default function ResultsOverlay({
   won, stuck, moves, par, mode, puzzleNumber, levelNumber,
   onClose, onNextLevel, onPlayAgain, onRestart,
@@ -89,18 +97,63 @@ export default function ResultsOverlay({
   const label = won ? getScoreLabel(moves, par, false) : "UNSORTED";
   const dayStr = String(puzzleNumber ?? 1).padStart(3, "0");
 
-  const handleShare = async () => {
-    if (mode === "daily") trackEvent('share_clicked', { game: 'sl', puzzleNo: puzzleNumber })
-    const result = won
-      ? `${label} · ${moves} moves`
-      : mode === "daily"
-        ? "UNSORTED — the tubes beat me today"
-        : "UNSORTED";
-    const text = mode === "daily"
-      ? `🧪 Sortl #${dayStr}\n${result}\nsortl.stoop.games`
-      : `🧪 Sortl Level ${levelNumber}\n${result}\nsortl.stoop.games`;
+  const buildResultsCanvas = (): Promise<Blob | null> =>
+    new Promise((resolve) => {
+      try {
+        const W = 1200, H = 630;
+        const canvas = document.createElement('canvas');
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { resolve(null); return; }
 
-    try { await navigator.clipboard.writeText(text); } catch { /* ignore */ }
+        const num = mode === "daily" ? dayStr : String(levelNumber ?? 1).padStart(3, '0');
+        const labelColor = won
+          ? (label === 'FLAWLESS SORT' || label === 'CLEAN SORT' ? '#c45a3a' : '#8a7355')
+          : '#6b5c4a';
+        const detail = won ? `${moves} moves  par ${par}` : 'UNSORTED';
+
+        ctx.fillStyle = '#f3e9d6'; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#2a1f15'; ctx.fillRect(0, 0, W, 160);
+        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 26px monospace';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(`SORTL #${num}`, W / 2, 80);
+        ctx.fillStyle = labelColor; ctx.font = 'bold 44px monospace';
+        ctx.fillText(label, W / 2, 295);
+        ctx.fillStyle = '#2a1f15'; ctx.font = 'bold 30px monospace';
+        ctx.fillText(detail, W / 2, 375);
+        ctx.font = '48px sans-serif';
+        ctx.fillText(getEmojiRow(won, moves, par), W / 2, 455);
+        ctx.fillStyle = '#8a7355'; ctx.font = '16px monospace';
+        ctx.fillText('sortl.stoop.games', W / 2, 596);
+
+        canvas.toBlob((blob) => resolve(blob), 'image/png');
+      } catch { resolve(null); }
+    });
+
+  const handleShare = async () => {
+    if (mode === "daily") trackEvent('share_clicked', { game: 'sl', puzzleNo: puzzleNumber });
+
+    const pNum = mode === "daily" ? (puzzleNumber ?? 1) : (levelNumber ?? 1);
+    const num = String(pNum).padStart(3, '0');
+    const detail = won ? `${moves} moves  par ${par}` : 'UNSORTED';
+    const shareUrl = `${window.location.origin}/share?n=${pNum}&label=${encodeURIComponent(label.replace(/_/g, ' '))}&detail=${encodeURIComponent(detail)}`;
+    const emojiRow = getEmojiRow(won, moves, par);
+    const text = `🧪 Sortl #${num}\n${label}\n${emojiRow}\n${shareUrl}`;
+
+    if (typeof navigator.canShare === 'function') {
+      const blob = await buildResultsCanvas();
+      if (blob) {
+        const file = new File([blob], 'sortl.png', { type: 'image/png' });
+        if (navigator.canShare({ files: [file] })) {
+          try { await navigator.share({ files: [file], text, url: shareUrl }); return; } catch { /* cancelled */ }
+        }
+      }
+      if (navigator.canShare({ url: shareUrl })) {
+        try { await navigator.share({ title: `Sortl #${num}`, text, url: shareUrl }); return; } catch { /* cancelled */ }
+      }
+    }
+
+    try { await navigator.clipboard.writeText(text); } catch { /* clipboard unavailable */ }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
