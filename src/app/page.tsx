@@ -2,7 +2,9 @@
 import { Fragment, useEffect, useState } from "react";
 import GameBoard from "./components/GameBoard";
 import Sidebar from "./components/Sidebar";
+import HowToPlayModal from "./components/HowToPlayModal";
 import { trackEvent } from "@/utils/trackEvent";
+import { getTodayKey } from "@/lib/daily";
 
 type Mode = "daily" | "levels";
 
@@ -20,6 +22,9 @@ export default function Home() {
   const [mode, setMode]               = useState<Mode>("daily");
   const [currentLevel, setCurrentLevel] = useState(1);
   const [sidebarKey, setSidebarKey]   = useState(0);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isNewUser, setIsNewUser]     = useState(false);
+  const [dailyDone, setDailyDone]     = useState(false);
 
   useEffect(() => {
     try {
@@ -31,6 +36,17 @@ export default function Home() {
         trackEvent('first_visit', { game: 'sl' });
       }
     } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    if (!localStorage.getItem("sl-seen-howtoplay")) {
+      localStorage.setItem("sl-seen-howtoplay", "1");
+      setShowOnboarding(true);
+      setIsNewUser(true);
+    }
+    if (localStorage.getItem("sl-last-played") === getTodayKey()) {
+      setDailyDone(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -106,6 +122,17 @@ export default function Home() {
 
   return (
     <>
+      <HowToPlayModal isOpen={showOnboarding} onClose={() => setShowOnboarding(false)} />
+
+      {/* Mobile daily hint badge */}
+      {isNewUser && !dailyDone && mode === "daily" && (
+        <div className="lg:hidden w-full px-4 pt-3">
+          <p style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 11, color: "#8a7355" }}>
+            🗓 New puzzle every day at midnight UTC
+          </p>
+        </div>
+      )}
+
       <div className="w-full px-4 flex gap-6 items-stretch flex-1">
 
         {/* Game area */}
@@ -118,13 +145,21 @@ export default function Home() {
               onLevelComplete={handleLevelComplete}
               onNextLevel={handleNextLevel}
               onPlayAgain={handlePlayAgain}
+              onDailyComplete={() => setDailyDone(true)}
             />
           </div>
         </div>
 
         {/* Sidebar — key forces remount after win so stats refresh */}
         <div className="hidden lg:block w-72 shrink-0">
-          <Sidebar key={sidebarKey} mode={mode} currentLevel={currentLevel} onSelectLevel={handleSelectLevel} />
+          <Sidebar
+            key={sidebarKey}
+            mode={mode}
+            currentLevel={currentLevel}
+            onSelectLevel={handleSelectLevel}
+            isNewUser={isNewUser}
+            dailyDone={dailyDone}
+          />
         </div>
 
       </div>

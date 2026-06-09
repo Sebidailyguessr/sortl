@@ -133,10 +133,11 @@ interface Props {
   onLevelComplete: (level: number, moves: number) => void;
   onNextLevel: () => void;
   onPlayAgain?: (level: number) => void;
+  onDailyComplete?: () => void;
 }
 
 export default function GameBoard({
-  mode, onModeChange, currentLevel, onLevelComplete, onNextLevel, onPlayAgain,
+  mode, onModeChange, currentLevel, onLevelComplete, onNextLevel, onPlayAgain, onDailyComplete,
 }: Props) {
   const [levelConfig, setLevelConfig] = useState<LevelConfig | null>(null);
   const [gameState, setGameState]     = useState<GameState | null>(null);
@@ -273,6 +274,7 @@ export default function GameBoard({
       }
       // last-played always set so tomorrow's streak check works correctly
       localStorage.setItem("sl-last-played", dateKey);
+      onDailyComplete?.();
     }
 
     if (mode === "levels" && gameState.won) onLevelComplete(currentLevel, winMovesRef.current);
