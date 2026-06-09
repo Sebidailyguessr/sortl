@@ -193,6 +193,7 @@ export default function GameBoard({
         const loadedState = { ...makeInitialState(config.tubes, config.tubeCapacity), ...saved } as GameState;
         setLevelConfig(config);
         setGameState(loadedState);
+        if (loadedState.won || loadedState.stuck) setShowOverlay(true);
         return;
       }
     } else {

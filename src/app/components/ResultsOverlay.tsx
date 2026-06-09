@@ -1,8 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getScoreLabel } from "@/lib/gameLogic";
 import RotatingAlsoPlay from "./RotatingAlsoPlay";
 import { trackEvent } from "@/utils/trackEvent";
+import { useNextPuzzleCountdown } from "@/hooks/useNextPuzzleCountdown";
 
 function getCountdown(): string {
   const now = new Date();
@@ -31,12 +32,53 @@ interface Props {
 
 const mono = "'JetBrains Mono', ui-monospace, monospace";
 
+const STREAK_MILESTONES = [3, 7, 14, 30]
+
 export default function ResultsOverlay({
   won, stuck, moves, par, mode, puzzleNumber, levelNumber,
   onClose, onNextLevel, onPlayAgain, onRestart,
 }: Props) {
   const [countdown, setCountdown] = useState(getCountdown);
   const [copied, setCopied] = useState(false);
+  const milestoneFired = useRef(false)
+
+  const streakNextCountdown = useNextPuzzleCountdown()
+
+  const streakState: 'active' | 'reset' | 'none' = (() => {
+    if (typeof window === 'undefined') return 'none'
+    try {
+      const count = parseInt(localStorage.getItem('sl-streak') ?? '0', 10)
+      const lastPlayed = localStorage.getItem('sl-last-played')
+      if (!lastPlayed || count === 0) return 'none'
+      const today = new Date()
+      const last = new Date(lastPlayed)
+      const diffDays = Math.floor(
+        (Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) -
+         Date.UTC(last.getFullYear(), last.getMonth(), last.getDate())) / 86400000
+      )
+      if (diffDays <= 1) return 'active'
+      return 'reset'
+    } catch {
+      return 'none'
+    }
+  })()
+
+  const streakCount = (() => {
+    if (typeof window === 'undefined') return 0
+    try {
+      return parseInt(localStorage.getItem('sl-streak') ?? '0', 10)
+    } catch {
+      return 0
+    }
+  })()
+
+  useEffect(() => {
+    if (mode !== 'daily') return
+    if (streakState === 'active' && STREAK_MILESTONES.includes(streakCount) && !milestoneFired.current) {
+      milestoneFired.current = true
+      trackEvent('streak_milestone', { game: 'sortl', milestone: streakCount })
+    }
+  }, [mode, streakState, streakCount])
 
   useEffect(() => {
     if (mode !== "daily") return;
@@ -152,10 +194,6 @@ export default function ResultsOverlay({
           {mode === "daily" ? (
             <div style={{ marginBottom: 16 }}>
               <p style={{
-                fontFamily: mono, fontSize: 11, color: "var(--ink-soft, #5a4632)",
-                margin: "0 0 8px",
-              }}>🔥 Come back tomorrow to keep your streak!</p>
-              <p style={{
                 fontFamily: mono, fontSize: 20, fontWeight: 600,
                 color: "var(--ink, #2a1f15)", letterSpacing: "0.06em",
                 margin: 0,
@@ -225,6 +263,45 @@ export default function ResultsOverlay({
           >{copied ? "✓ Copied!" : "Share"}</button>
 
           <a href='https://ko-fi.com/stoopgames' target='_blank' rel='noopener noreferrer' onClick={() => trackEvent('kofi_clicked', { game: 'sl' })} style={{display:'block',textAlign:'center',fontFamily:'monospace',fontSize:'11px',color:'#8a7355',letterSpacing:'0.05em',textDecoration:'none',marginTop:'12px'}}>☕ enjoyed it? buy me a coffee</a>
+
+          {/* Streak milestone badge */}
+          {mode === "daily" && streakState === 'active' && STREAK_MILESTONES.includes(streakCount) && (
+            <div style={{ textAlign: 'center', marginTop: '12px' }}>
+              <span style={{
+                display: 'inline-block',
+                background: 'rgba(196, 90, 58, 0.08)',
+                border: '1px solid rgba(196, 90, 58, 0.25)',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                fontFamily: mono,
+                fontSize: '11px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.12em',
+                color: '#c45a3a',
+              }}>
+                🔥 {streakCount}-day streak! You&apos;re a regular.
+              </span>
+            </div>
+          )}
+
+          {/* Streak reminder */}
+          {mode === "daily" && (
+            <div style={{ fontFamily: mono, fontSize: '11px', color: '#8a7355', textAlign: 'center', padding: '12px 0' }}>
+              {streakState === 'active' && streakCount >= 1 ? (
+                <>
+                  <div>🔥 {streakCount}-day streak — next puzzle in {streakNextCountdown}</div>
+                  <div>Come back tomorrow to keep it.</div>
+                </>
+              ) : streakState === 'reset' ? (
+                <div>💔 Streak reset. Start a new one — next puzzle in {streakNextCountdown}</div>
+              ) : (
+                <>
+                  <div>🧩 New puzzle every day at midnight.</div>
+                  <div>See you tomorrow 👋</div>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Also Play */}
