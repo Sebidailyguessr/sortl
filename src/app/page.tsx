@@ -51,26 +51,14 @@ export default function Home() {
 
   useEffect(() => {
     try {
-      const savedMode = localStorage.getItem("sl-mode") as Mode | null;
-      const activeMode: Mode = (savedMode === "daily" || savedMode === "levels") ? savedMode : "daily";
-      setMode(activeMode);
-
-      let savedLevel = Number(localStorage.getItem("sl-current-level") || 0);
-      if (savedLevel < 1) savedLevel = 1;
-
-      if (activeMode === "levels") {
-        savedLevel = findNextUnsolvedLevel(savedLevel);
-      }
-
+      const savedLevel = Math.max(1, Number(localStorage.getItem("sl-current-level") || 1));
       setCurrentLevel(savedLevel);
-      localStorage.setItem("sl-current-level", String(savedLevel));
     } catch {}
   }, []);
 
   function handleModeChange(m: Mode) {
     setMode(m);
     try {
-      localStorage.setItem("sl-mode", m);
       if (m === "levels") {
         const next = findNextUnsolvedLevel(currentLevel);
         if (next !== currentLevel) {
