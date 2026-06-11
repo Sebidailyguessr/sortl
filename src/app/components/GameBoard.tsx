@@ -12,6 +12,22 @@ import { generateLevel } from "@/lib/levels";
 import { trackEvent } from "@/utils/trackEvent";
 
 type Mode = "daily" | "levels";
+type LevelSubState = "select" | "playing";
+
+const TOTAL_LEVELS = 300;
+const mono = "'JetBrains Mono', ui-monospace, monospace";
+
+function levelToGroup(n: number): 0 | 1 | 2 {
+  if (n >= 200) return 2;
+  if (n >= 100) return 1;
+  return 0;
+}
+
+function groupRange(g: 0 | 1 | 2): number[] {
+  if (g === 0) return Array.from({ length: 99 },  (_, i) => i + 1);
+  if (g === 1) return Array.from({ length: 100 }, (_, i) => 100 + i);
+  return          Array.from({ length: 100 }, (_, i) => 200 + i);
+}
 
 // ── Pour animation ──────────────────────────────────────────────────────────
 
@@ -134,10 +150,12 @@ interface Props {
   onNextLevel: () => void;
   onPlayAgain?: (level: number) => void;
   onDailyComplete?: () => void;
+  onSelectLevel: (n: number) => void;
 }
 
 export default function GameBoard({
   mode, onModeChange, currentLevel, onLevelComplete, onNextLevel, onPlayAgain, onDailyComplete,
+  onSelectLevel,
 }: Props) {
   const [levelConfig, setLevelConfig] = useState<LevelConfig | null>(null);
   const [gameState, setGameState]     = useState<GameState | null>(null);
@@ -150,6 +168,9 @@ export default function GameBoard({
   const [compact, setCompact]         = useState(false);
   const [savedResult, setSavedResult] = useState<{ moves: number; par: number } | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [levelSubState, setLevelSubState] = useState<LevelSubState>("playing");
+  const [levelGroup, setLevelGroup] = useState<0 | 1 | 2>(() => levelToGroup(currentLevel));
+  const [doneLevels, setDoneLevels] = useState<Set<number>>(new Set());
 
   const tubeRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const invalidTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -169,7 +190,14 @@ export default function GameBoard({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  useEffect(() => { setHydrated(true); }, []);
+  useEffect(() => {
+    setHydrated(true);
+    const done = new Set<number>();
+    for (let n = 1; n <= TOTAL_LEVELS; n++) {
+      if (localStorage.getItem(`sl-level-done-${n}`) === "true") done.add(n);
+    }
+    setDoneLevels(done);
+  }, []);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -278,7 +306,10 @@ export default function GameBoard({
       onDailyComplete?.();
     }
 
-    if (mode === "levels" && gameState.won) onLevelComplete(currentLevel, winMovesRef.current);
+    if (mode === "levels" && gameState.won) {
+      onLevelComplete(currentLevel, winMovesRef.current);
+      setDoneLevels(prev => new Set(prev).add(currentLevel));
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState?.won, gameState?.stuck]);
 
@@ -397,29 +428,16 @@ export default function GameBoard({
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  if (!gameState || !levelConfig) {
-    return <div className="flex items-center justify-center h-64 text-[--ink-faded]">Loading…</div>;
-  }
-
-  const isDailyDone = mode === "daily" && (gameState.won || gameState.stuck);
-
-  // During animation: hide flying layer from source tube
-  const displayTubes = animState
-    ? gameState.tubes.map((tube, i) =>
-        i === animState.fromIdx ? tube.slice(0, -1) : tube
-      )
-    : gameState.tubes;
-
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20, padding: "24px 16px" }}>
 
-      {/* Mode toggle — matches Bloom/Palette exactly */}
+      {/* Mode toggle */}
       <div style={{
         display: "flex",
         borderRadius: 8,
         overflow: "hidden",
         border: "1px dashed rgba(42,31,21,0.18)",
-        fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+        fontFamily: mono,
         fontSize: 11,
         letterSpacing: "0.1em",
         textTransform: "uppercase",
@@ -427,7 +445,13 @@ export default function GameBoard({
         {(["daily", "levels"] as Mode[]).map(m => (
           <button
             key={m}
-            onClick={() => onModeChange(m)}
+            onClick={() => {
+              onModeChange(m);
+              if (m === "levels") {
+                setLevelSubState("select");
+                setLevelGroup(levelToGroup(currentLevel));
+              }
+            }}
             style={{
               padding: "8px 20px",
               background: mode === m ? "var(--terracotta, #c45a3a)" : "transparent",
@@ -435,7 +459,7 @@ export default function GameBoard({
               border: "none",
               cursor: "pointer",
               transition: "background 0.15s ease",
-              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+              fontFamily: mono,
               fontSize: 11,
               letterSpacing: "0.1em",
               textTransform: "uppercase",
@@ -446,135 +470,220 @@ export default function GameBoard({
         ))}
       </div>
 
-      {/* Puzzle label */}
-      <div style={{
-        fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-        fontSize: 11,
-        color: "var(--ink-faded, #8a7355)",
-        letterSpacing: "0.1em",
-        textTransform: "uppercase",
-      }}>
-        {mode === "daily"
-          ? `Sortl #${String(puzzleNumber).padStart(3, "0")}`
-          : `Level #${String(currentLevel).padStart(3, "0")}`}
-      </div>
-
-      {/* Controls row: move counter + undo/restart */}
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        width: "100%", maxWidth: 480,
-      }}>
-        <div style={{
-          fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-          fontSize: 13, color: "var(--ink-faded, #8a7355)",
-          letterSpacing: "0.08em",
-        }}>
-          <span style={{ fontSize: 22, fontWeight: 700, color: "var(--ink, #2a1f15)" }}>
-            {gameState.moves}
-          </span>
-          {" "}moves · par {par}
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button
-            onClick={handleUndo}
-            disabled={gameState.history.length === 0 || isDailyDone || !!animState}
-            style={ctrlBtn}
-          >
-            ↩ Undo
-          </button>
-          <button
-            onClick={handleRestart}
-            style={ctrlBtn}
-          >
-            ↺ Restart
-          </button>
-        </div>
-      </div>
-
-      {/* Tubes */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end", justifyContent: "center" }}>
-        {displayTubes.map((tube, i) => {
-          const complete = tube.length === levelConfig.tubeCapacity && tube.every(c => c === tube[0]);
-          return (
-            <Tube
-              key={i}
-              ref={el => { tubeRefs.current[i] = el; }}
-              tube={tube}
-              capacity={levelConfig.tubeCapacity}
-              selected={selected === i}
-              complete={complete}
-              pulsing={pulsing && complete}
-              invalid={invalidTube === i}
-              compact={compact}
-              onClick={() => handleTubeClick(i)}
-            />
-          );
-        })}
-      </div>
-
-      {/* Flying layer during pour */}
-      {animState && <PourLayer anim={animState} onDone={handleAnimDone} />}
-
-      {/* Confetti on win */}
-      {showConfetti && <Confetti />}
-
-      {/* 📊 Results button — shown when game is over and overlay is dismissed */}
-      {(gameState.won || gameState.stuck || savedResult !== null) && !showOverlay && (
-        <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", marginTop: 8 }}>
-          <button
-            onClick={() => setShowOverlay(true)}
-            style={{
-              padding: "10px 22px",
-              background: "transparent",
-              color: "var(--ink-soft, #5a4632)",
-              border: "1px dashed rgba(42,31,21,0.3)",
-              borderRadius: 8,
-              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-              fontSize: 11,
-              textTransform: "uppercase",
-              letterSpacing: "0.18em",
-              cursor: "pointer",
-            }}
-          >
-            📊 Results
-          </button>
-          {mode === "levels" && (gameState.won || savedResult !== null) && (
-            <button
-              onClick={handleNextLevel}
-              style={{
-                padding: "10px 22px",
-                background: "var(--terracotta, #c45a3a)",
-                color: "white",
+      {/* Level select grid — levels + select substate */}
+      {mode === "levels" && levelSubState === "select" && (
+        <div style={{ width: "100%", maxWidth: 480 }}>
+          {/* Group tabs */}
+          <div style={{
+            display: "flex",
+            borderRadius: 8,
+            overflow: "hidden",
+            border: "1px dashed rgba(42,31,21,0.18)",
+            fontFamily: mono,
+            fontSize: 11,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            marginBottom: 16,
+          }}>
+            {([0, 1, 2] as const).map(g => (
+              <button key={g} onClick={() => setLevelGroup(g)} style={{
+                flex: 1,
+                padding: "8px 0",
+                background: levelGroup === g ? "var(--terracotta, #c45a3a)" : "transparent",
+                color: levelGroup === g ? "#fff" : "var(--ink-soft, #5a4632)",
                 border: "none",
-                borderRadius: 8,
-                fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-                fontSize: 11,
-                textTransform: "uppercase",
-                letterSpacing: "0.18em",
                 cursor: "pointer",
-              }}
-            >
-              Next Level →
-            </button>
-          )}
+                transition: "background 0.15s ease",
+                fontFamily: mono,
+                fontSize: 11,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+              }}>
+                {g === 0 ? "1–99" : g === 1 ? "100–199" : "200–299"}
+              </button>
+            ))}
+          </div>
+
+          {/* Level grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(10, 1fr)", gap: 6 }}>
+            {groupRange(levelGroup).map(n => {
+              const completed = doneLevels.has(n);
+              const isCurrent = n === currentLevel;
+              return (
+                <button
+                  key={n}
+                  onClick={() => { onSelectLevel(n); setLevelSubState("playing"); }}
+                  title={`Level ${n}${completed ? " ✓" : isCurrent ? " (current)" : ""}`}
+                  style={{
+                    borderRadius: 6,
+                    padding: "8px 0 6px",
+                    fontFamily: mono, fontSize: 11,
+                    display: "flex", flexDirection: "column", alignItems: "center",
+                    background: completed ? "#c45a3a" : "transparent",
+                    color: completed ? "#f3e9d6" : isCurrent ? "#c45a3a" : "#2a1f15",
+                    border: completed ? "none"
+                      : isCurrent ? "1.5px solid #c45a3a"
+                      : "1.5px solid rgba(42,31,21,0.15)",
+                    cursor: "pointer",
+                    transition: "background 150ms, color 150ms",
+                  }}
+                >
+                  <span style={{ fontWeight: 600 }}>{n}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <p style={{ fontFamily: mono, fontSize: 11, color: "#8a7355", marginTop: 16, textAlign: "center" }}>
+            <span style={{ color: "#c45a3a" }}>{doneLevels.size}</span>
+            {" / "}{TOTAL_LEVELS} completed
+          </p>
         </div>
       )}
 
-      {/* Results overlay */}
-      {showOverlay && (
-        <ResultsOverlay
-          won={savedResult !== null || gameState.won}
-          stuck={savedResult === null && gameState.stuck}
-          moves={savedResult?.moves ?? gameState.moves}
-          par={savedResult?.par ?? par}
-          mode={mode}
-          puzzleNumber={puzzleNumber}
-          levelNumber={currentLevel}
-          onClose={() => setShowOverlay(false)}
-          onNextLevel={handleNextLevel}
-          onPlayAgain={mode === "levels" && (savedResult !== null || gameState.won) ? handlePlayAgainLevel : undefined}
-          onRestart={savedResult === null && gameState.stuck ? handleRestart : undefined}
-        />
+      {/* Game — daily mode OR levels+playing */}
+      {(mode === "daily" || levelSubState === "playing") && (
+        <>
+          {(!gameState || !levelConfig) ? (
+            <div className="flex items-center justify-center h-64 text-[--ink-faded]">Loading…</div>
+          ) : (() => {
+            const isDailyDone = mode === "daily" && (gameState.won || gameState.stuck);
+            const displayTubes = animState
+              ? gameState.tubes.map((tube, i) =>
+                  i === animState.fromIdx ? tube.slice(0, -1) : tube
+                )
+              : gameState.tubes;
+            return (
+              <>
+                {/* Puzzle label */}
+                <div style={{
+                  fontFamily: mono,
+                  fontSize: 11,
+                  color: "var(--ink-faded, #8a7355)",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                }}>
+                  {mode === "daily"
+                    ? `Sortl #${String(puzzleNumber).padStart(3, "0")}`
+                    : `Level #${String(currentLevel).padStart(3, "0")}`}
+                </div>
+
+                {/* Controls row: move counter + undo/restart */}
+                <div style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  width: "100%", maxWidth: 480,
+                }}>
+                  <div style={{
+                    fontFamily: mono,
+                    fontSize: 13, color: "var(--ink-faded, #8a7355)",
+                    letterSpacing: "0.08em",
+                  }}>
+                    <span style={{ fontSize: 22, fontWeight: 700, color: "var(--ink, #2a1f15)" }}>
+                      {gameState.moves}
+                    </span>
+                    {" "}moves · par {par}
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      onClick={handleUndo}
+                      disabled={gameState.history.length === 0 || isDailyDone || !!animState}
+                      style={ctrlBtn}
+                    >
+                      ↩ Undo
+                    </button>
+                    <button onClick={handleRestart} style={ctrlBtn}>↺ Restart</button>
+                  </div>
+                </div>
+
+                {/* Tubes */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end", justifyContent: "center" }}>
+                  {displayTubes.map((tube, i) => {
+                    const complete = tube.length === levelConfig.tubeCapacity && tube.every(c => c === tube[0]);
+                    return (
+                      <Tube
+                        key={i}
+                        ref={el => { tubeRefs.current[i] = el; }}
+                        tube={tube}
+                        capacity={levelConfig.tubeCapacity}
+                        selected={selected === i}
+                        complete={complete}
+                        pulsing={pulsing && complete}
+                        invalid={invalidTube === i}
+                        compact={compact}
+                        onClick={() => handleTubeClick(i)}
+                      />
+                    );
+                  })}
+                </div>
+
+                {/* Flying layer during pour */}
+                {animState && <PourLayer anim={animState} onDone={handleAnimDone} />}
+
+                {/* Confetti on win */}
+                {showConfetti && <Confetti />}
+
+                {/* 📊 Results button */}
+                {(gameState.won || gameState.stuck || savedResult !== null) && !showOverlay && (
+                  <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", marginTop: 8 }}>
+                    <button
+                      onClick={() => setShowOverlay(true)}
+                      style={{
+                        padding: "10px 22px",
+                        background: "transparent",
+                        color: "var(--ink-soft, #5a4632)",
+                        border: "1px dashed rgba(42,31,21,0.3)",
+                        borderRadius: 8,
+                        fontFamily: mono,
+                        fontSize: 11,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.18em",
+                        cursor: "pointer",
+                      }}
+                    >
+                      📊 Results
+                    </button>
+                    {mode === "levels" && (gameState.won || savedResult !== null) && (
+                      <button
+                        onClick={handleNextLevel}
+                        style={{
+                          padding: "10px 22px",
+                          background: "var(--terracotta, #c45a3a)",
+                          color: "white",
+                          border: "none",
+                          borderRadius: 8,
+                          fontFamily: mono,
+                          fontSize: 11,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.18em",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Next Level →
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Results overlay */}
+                {showOverlay && (
+                  <ResultsOverlay
+                    won={savedResult !== null || gameState.won}
+                    stuck={savedResult === null && gameState.stuck}
+                    moves={savedResult?.moves ?? gameState.moves}
+                    par={savedResult?.par ?? par}
+                    mode={mode}
+                    puzzleNumber={puzzleNumber}
+                    levelNumber={currentLevel}
+                    onClose={() => setShowOverlay(false)}
+                    onNextLevel={handleNextLevel}
+                    onPlayAgain={mode === "levels" && (savedResult !== null || gameState.won) ? handlePlayAgainLevel : undefined}
+                    onRestart={savedResult === null && gameState.stuck ? handleRestart : undefined}
+                  />
+                )}
+              </>
+            );
+          })()}
+        </>
       )}
     </div>
   );

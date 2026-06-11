@@ -146,6 +146,7 @@ export default function Home() {
               onNextLevel={handleNextLevel}
               onPlayAgain={handlePlayAgain}
               onDailyComplete={() => setDailyDone(true)}
+              onSelectLevel={handleSelectLevel}
             />
           </div>
         </div>
@@ -156,7 +157,6 @@ export default function Home() {
             key={sidebarKey}
             mode={mode}
             currentLevel={currentLevel}
-            onSelectLevel={handleSelectLevel}
             isNewUser={isNewUser}
             dailyDone={dailyDone}
           />

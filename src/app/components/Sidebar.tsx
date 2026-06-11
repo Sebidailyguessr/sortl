@@ -4,7 +4,6 @@ import { getPuzzleNumber, getTodayKey } from "@/lib/daily";
 import RotatingAlsoPlay from "./RotatingAlsoPlay";
 
 const TOTAL_LEVELS = 300;
-const mono = "'JetBrains Mono', ui-monospace, monospace";
 
 const SCORING: [string, string][] = [
   ["≤ par",    "FLAWLESS SORT"],
@@ -17,20 +16,16 @@ const SCORING: [string, string][] = [
 interface Props {
   mode: "daily" | "levels";
   currentLevel: number;
-  onSelectLevel: (n: number) => void;
   isNewUser?: boolean;
   dailyDone?: boolean;
 }
 
-export default function Sidebar({ mode, currentLevel, onSelectLevel, isNewUser = false, dailyDone = false }: Props) {
+export default function Sidebar({ mode, currentLevel, isNewUser = false, dailyDone = false }: Props) {
   const puzzleNumber = getPuzzleNumber(getTodayKey());
   const [streak, setStreak]           = useState(0);
   const [bestStreak, setBestStreak]   = useState(0);
   const [gamesPlayed, setGamesPlayed] = useState(0);
   const [doneLevels, setDoneLevels]   = useState<Set<number>>(new Set());
-  const [levelGroup, setLevelGroup]   = useState<0 | 1 | 2>(
-    () => Math.min(2, Math.floor((currentLevel - 1) / 100)) as 0 | 1 | 2
-  );
 
   useEffect(() => {
     setStreak(parseInt(localStorage.getItem("sl-streak") || "0"));
@@ -101,76 +96,6 @@ export default function Sidebar({ mode, currentLevel, onSelectLevel, isNewUser =
           </div>
         )}
       </div>
-
-      {/* Levels grid — levels only, Bloom-style */}
-      {mode === "levels" && (
-        <div className="px-5 py-4 border-b border-[rgba(42,31,21,0.18)] shrink-0">
-          {/* Group tabs */}
-          <div style={{
-            display: "flex",
-            borderRadius: 8,
-            overflow: "hidden",
-            border: "1px dashed rgba(42,31,21,0.18)",
-            marginBottom: 12,
-          }}>
-            {([0, 1, 2] as const).map(g => (
-              <button key={g} onClick={() => setLevelGroup(g)} style={{
-                flex: 1,
-                padding: "6px 0",
-                background: levelGroup === g ? "#c45a3a" : "transparent",
-                color: levelGroup === g ? "#fff" : "#5a4632",
-                border: "none",
-                cursor: "pointer",
-                transition: "background 0.15s ease",
-                fontFamily: mono,
-                fontSize: 10,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-              }}>
-                {g === 0 ? "1–100" : g === 1 ? "101–200" : "201–300"}
-              </button>
-            ))}
-          </div>
-
-          {/* 100-level grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(10, 1fr)", gap: 4 }}>
-            {Array.from({ length: 100 }, (_, i) => levelGroup * 100 + i + 1).map(n => {
-              const completed = doneLevels.has(n);
-              const isCurrent = n === currentLevel;
-              return (
-                <button
-                  key={n}
-                  onClick={() => onSelectLevel(n)}
-                  title={`Level ${n}${completed ? " ✓" : isCurrent ? " (current)" : ""}`}
-                  style={{
-                    borderRadius: 5,
-                    padding: "5px 0 3px",
-                    fontFamily: mono,
-                    fontSize: 10,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    background: completed ? "#c45a3a" : "transparent",
-                    color: completed ? "#f3e9d6" : isCurrent ? "#c45a3a" : "#2a1f15",
-                    border: completed ? "none"
-                      : isCurrent ? "1.5px solid #c45a3a"
-                      : "1.5px solid rgba(42,31,21,0.15)",
-                    cursor: "pointer",
-                    transition: "background 150ms, color 150ms",
-                  }}
-                >
-                  <span style={{ fontWeight: 600 }}>{n}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <p style={{ fontFamily: mono, fontSize: 11, color: "#8a7355", marginTop: 10, textAlign: "center" }}>
-            <span style={{ color: "#c45a3a" }}>{doneLevels.size}</span>
-            {" / "}{TOTAL_LEVELS} completed
-          </p>
-        </div>
-      )}
 
       {/* How to Play */}
       <div className="px-5 py-4 border-b border-[rgba(42,31,21,0.18)] shrink-0">
