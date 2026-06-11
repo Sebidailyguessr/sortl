@@ -4,6 +4,7 @@ import { getPuzzleNumber, getTodayKey } from "@/lib/daily";
 import RotatingAlsoPlay from "./RotatingAlsoPlay";
 
 const TOTAL_LEVELS = 300;
+const mono = "'JetBrains Mono', ui-monospace, monospace";
 
 const SCORING: [string, string][] = [
   ["≤ par",    "FLAWLESS SORT"],
@@ -27,6 +28,9 @@ export default function Sidebar({ mode, currentLevel, onSelectLevel, isNewUser =
   const [bestStreak, setBestStreak]   = useState(0);
   const [gamesPlayed, setGamesPlayed] = useState(0);
   const [doneLevels, setDoneLevels]   = useState<Set<number>>(new Set());
+  const [levelGroup, setLevelGroup]   = useState<0 | 1 | 2>(
+    () => Math.min(2, Math.floor((currentLevel - 1) / 100)) as 0 | 1 | 2
+  );
 
   useEffect(() => {
     setStreak(parseInt(localStorage.getItem("sl-streak") || "0"));
@@ -63,11 +67,11 @@ export default function Sidebar({ mode, currentLevel, onSelectLevel, isNewUser =
         </p>
       )}
 
-      {/* Your Stats — daily only */}
-      {mode === "daily" && (
-        <div className="px-5 py-4 border-b border-[rgba(42,31,21,0.18)] shrink-0">
-          <h2 className="text-[#8a7355] text-xs font-semibold uppercase tracking-widest mb-3 font-mono">Your Stats</h2>
-          {gamesPlayed === 0 ? (
+      {/* Your Stats */}
+      <div className="px-5 py-4 border-b border-[rgba(42,31,21,0.18)] shrink-0">
+        <h2 className="text-[#8a7355] text-xs font-semibold uppercase tracking-widest mb-3 font-mono">Your Stats</h2>
+        {mode === "daily" ? (
+          gamesPlayed === 0 ? (
             <p className="text-[#8a7355] text-xs">Play your first game to see stats</p>
           ) : (
             <div className="space-y-2.5">
@@ -82,49 +86,88 @@ export default function Sidebar({ mode, currentLevel, onSelectLevel, isNewUser =
                 </div>
               ))}
             </div>
-          )}
-        </div>
-      )}
+          )
+        ) : (
+          <div className="space-y-2.5">
+            {([
+              ["📍", "Current level",    String(currentLevel)],
+              ["✅", "Levels completed", `${doneLevels.size} / ${TOTAL_LEVELS}`],
+            ] as [string, string, string][]).map(([icon, label, value]) => (
+              <div key={label} className="flex items-center justify-between text-sm">
+                <span className="text-[#5a4632]">{icon} {label}</span>
+                <span className="text-[#2a1f15] font-semibold tabular-nums">{value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-      {/* Levels grid — levels only */}
+      {/* Levels grid — levels only, Bloom-style */}
       {mode === "levels" && (
         <div className="px-5 py-4 border-b border-[rgba(42,31,21,0.18)] shrink-0">
-          <h2 className="text-[#8a7355] text-xs font-semibold uppercase tracking-widest mb-3 font-mono">Levels</h2>
+          {/* Group tabs */}
           <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(10, 14px)",
-            gap: 3,
-            maxHeight: 200,
-            overflowY: "auto",
+            display: "flex",
+            borderRadius: 8,
+            overflow: "hidden",
+            border: "1px dashed rgba(42,31,21,0.18)",
+            marginBottom: 12,
           }}>
-            {Array.from({ length: TOTAL_LEVELS }, (_, i) => i + 1).map(n => {
-              const isDone    = doneLevels.has(n);
+            {([0, 1, 2] as const).map(g => (
+              <button key={g} onClick={() => setLevelGroup(g)} style={{
+                flex: 1,
+                padding: "6px 0",
+                background: levelGroup === g ? "#c45a3a" : "transparent",
+                color: levelGroup === g ? "#fff" : "#5a4632",
+                border: "none",
+                cursor: "pointer",
+                transition: "background 0.15s ease",
+                fontFamily: mono,
+                fontSize: 10,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+              }}>
+                {g === 0 ? "1–100" : g === 1 ? "101–200" : "201–300"}
+              </button>
+            ))}
+          </div>
+
+          {/* 100-level grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(10, 1fr)", gap: 4 }}>
+            {Array.from({ length: 100 }, (_, i) => levelGroup * 100 + i + 1).map(n => {
+              const completed = doneLevels.has(n);
               const isCurrent = n === currentLevel;
               return (
                 <button
                   key={n}
                   onClick={() => onSelectLevel(n)}
-                  title={`Level ${n}${isDone ? " ✓" : isCurrent ? " (current)" : ""}`}
+                  title={`Level ${n}${completed ? " ✓" : isCurrent ? " (current)" : ""}`}
                   style={{
-                    width: 14,
-                    height: 14,
-                    borderRadius: 3,
-                    background: (isDone || isCurrent) ? "#c45a3a" : "rgba(42,31,21,0.1)",
-                    opacity: (isCurrent && !isDone) ? 0.5 : 1,
-                    outline: isCurrent ? "2px solid #c45a3a" : "none",
-                    outlineOffset: 1,
-                    border: "none",
+                    borderRadius: 5,
+                    padding: "5px 0 3px",
+                    fontFamily: mono,
+                    fontSize: 10,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    background: completed ? "#c45a3a" : "transparent",
+                    color: completed ? "#f3e9d6" : isCurrent ? "#c45a3a" : "#2a1f15",
+                    border: completed ? "none"
+                      : isCurrent ? "1.5px solid #c45a3a"
+                      : "1.5px solid rgba(42,31,21,0.15)",
                     cursor: "pointer",
-                    padding: 0,
-                    flexShrink: 0,
+                    transition: "background 150ms, color 150ms",
                   }}
-                />
+                >
+                  <span style={{ fontWeight: 600 }}>{n}</span>
+                </button>
               );
             })}
           </div>
-          <p className="text-xs mt-2 font-mono">
+
+          <p style={{ fontFamily: mono, fontSize: 11, color: "#8a7355", marginTop: 10, textAlign: "center" }}>
             <span style={{ color: "#c45a3a" }}>{doneLevels.size}</span>
-            <span style={{ color: "#8a7355" }}> / {TOTAL_LEVELS} completed</span>
+            {" / "}{TOTAL_LEVELS} completed
           </p>
         </div>
       )}
@@ -146,20 +189,18 @@ export default function Sidebar({ mode, currentLevel, onSelectLevel, isNewUser =
           ))}
         </ol>
 
-        {/* Scoring table — daily only */}
-        {mode === "daily" && (
-          <div className="bg-[var(--paper)] rounded-xl p-3 border border-dashed border-[rgba(42,31,21,0.18)]">
-            <p className="text-[#5a4632] text-xs font-semibold uppercase tracking-widest mb-2 font-mono">Scoring</p>
-            <div className="space-y-1">
-              {SCORING.map(([condition, label]) => (
-                <div key={label} className="flex items-center text-xs gap-2">
-                  <span className="text-[#8a7355] w-20 shrink-0 font-mono">{condition}</span>
-                  <span className="text-[#2a1f15] font-semibold">{label}</span>
-                </div>
-              ))}
-            </div>
+        {/* Scoring table */}
+        <div className="bg-[var(--paper)] rounded-xl p-3 border border-dashed border-[rgba(42,31,21,0.18)]">
+          <p className="text-[#5a4632] text-xs font-semibold uppercase tracking-widest mb-2 font-mono">Scoring</p>
+          <div className="space-y-1">
+            {SCORING.map(([condition, label]) => (
+              <div key={label} className="flex items-center text-xs gap-2">
+                <span className="text-[#8a7355] w-20 shrink-0 font-mono">{condition}</span>
+                <span className="text-[#2a1f15] font-semibold">{label}</span>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Also on Stoop (new users only) */}
@@ -173,6 +214,7 @@ export default function Sidebar({ mode, currentLevel, onSelectLevel, isNewUser =
               { label: "cocktailguessr.app", url: "https://cocktailguessr.app" },
               { label: "palette.stoop.games",url: "https://palette.stoop.games" },
               { label: "bloom.stoop.games",  url: "https://bloom.stoop.games" },
+              { label: "higher.stoop.games", url: "https://higher.stoop.games" },
             ].map((g, i, arr) => (
               <span key={g.url}>
                 <a

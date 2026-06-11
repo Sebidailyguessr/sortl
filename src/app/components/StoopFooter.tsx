@@ -76,6 +76,37 @@ export default function StoopFooter({ currentGame: _ }: { currentGame: string })
       {/* Newsletter signup */}
       <NewsletterSignup />
 
+      {/* More Stoop games */}
+      <div style={{ margin: "10px 0" }}>
+        <p style={{ ...mono, fontSize: 9, textTransform: "uppercase", letterSpacing: "0.1em", color: "#8a7355", margin: "0 0 6px" }}>
+          More Stoop games
+        </p>
+        <p style={{ ...mono, fontSize: 10, color: "#8a7355", lineHeight: 1.9, margin: 0 }}>
+          {([
+            { label: "DailyGuessr",    url: "https://dailyguessr.app" },
+            { label: "FlagGuessr",     url: "https://flagguessr.app" },
+            { label: "CocktailGuessr", url: "https://cocktailguessr.app" },
+            { label: "Palette",        url: "https://palette.stoop.games" },
+            { label: "Bloom",          url: "https://bloom.stoop.games" },
+            { label: "Higher/Lower",   url: "https://higher.stoop.games" },
+          ] as { label: string; url: string }[]).map((g, i, arr) => (
+            <span key={g.url}>
+              <a
+                href={g.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "#c45a3a", textDecoration: "none" }}
+                onMouseEnter={e => (e.currentTarget.style.textDecoration = "underline")}
+                onMouseLeave={e => (e.currentTarget.style.textDecoration = "none")}
+              >
+                {g.label}
+              </a>
+              {i < arr.length - 1 && <span style={{ color: "#8a7355" }}> · </span>}
+            </span>
+          ))}
+        </p>
+      </div>
+
       {/* Row 3 — copyright + ko-fi */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span style={{
